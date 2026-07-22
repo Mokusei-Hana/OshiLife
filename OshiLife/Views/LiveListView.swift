@@ -52,16 +52,7 @@ struct LiveListView: View {
                     ScrollView {
                         LazyVStack(spacing: 24) {
                             ForEach(viewModel.filteredEvents) { event in
-                                NavigationLink(value: event.id) {
-                                    LiveCardView(event: event, imageStore: imageStore)
-                                }
-                                .buttonStyle(.plain)
-                                .matchedTransitionSource(id: event.id, in: cardNamespace)
-                                .contextMenu {
-                                    Button("common.edit", systemImage: "pencil") {
-                                        editorRoute = EditorRoute(event: event)
-                                    }
-                                }
+                                eventCard(event)
                             }
                         }
                         .padding(.horizontal, 18)
@@ -162,6 +153,19 @@ struct LiveListView: View {
             }
         } message: {
             Text(viewModel.errorMessage ?? importCoordinator.errorMessage ?? "")
+        }
+    }
+
+    private func eventCard(_ event: LiveEvent) -> some View {
+        NavigationLink(value: event.id) {
+            LiveCardView(event: event, imageStore: imageStore)
+        }
+        .buttonStyle(.plain)
+        .matchedTransitionSource(id: event.id, in: cardNamespace)
+        .contextMenu {
+            Button("common.edit", systemImage: "pencil") {
+                editorRoute = EditorRoute(event: event)
+            }
         }
     }
 
