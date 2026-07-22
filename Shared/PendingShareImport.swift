@@ -40,7 +40,7 @@ enum PendingImportStoreError: LocalizedError {
     }
 }
 
-struct PendingImportStore: Sendable {
+struct PendingImportStore {
     private let rootURL: URL
     private let fileManager: FileManager
 
