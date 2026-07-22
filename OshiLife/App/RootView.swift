@@ -1,0 +1,34 @@
+import SwiftData
+import SwiftUI
+
+struct RootView: View {
+    private let liveStore: LiveStore
+    private let imageStore: ImageStore
+    private let pendingStore: PendingImportStore?
+    private let startupWarning: String?
+
+    init(container: ModelContainer, startupWarning: String?) {
+        let liveStore = LiveStore(container: container)
+        self.liveStore = liveStore
+        self.startupWarning = startupWarning
+
+        if let sharedURL = try? FileManager.default.oshiLifeSharedContainerURL() {
+            imageStore = ImageStore(rootURL: sharedURL)
+            pendingStore = PendingImportStore(rootURL: sharedURL)
+        } else {
+            let fallback = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appending(path: "OshiLife", directoryHint: .isDirectory)
+            imageStore = ImageStore(rootURL: fallback)
+            pendingStore = nil
+        }
+    }
+
+    var body: some View {
+        LiveListView(
+            liveStore: liveStore,
+            imageStore: imageStore,
+            pendingStore: pendingStore,
+            startupWarning: startupWarning
+        )
+    }
+}

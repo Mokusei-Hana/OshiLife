@@ -1,0 +1,256 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A00000000000000000000041 /* OshiLifeShare.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A00000000000000000000032 /* OshiLifeShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A00000000000000000000051 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A00000000000000000000012;
+			remoteInfo = OshiLifeShare;
+		};
+		A00000000000000000000052 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A00000000000000000000011;
+			remoteInfo = OshiLife;
+		};
+		A00000000000000000000053 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A00000000000000000000011;
+			remoteInfo = OshiLife;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A00000000000000000000044 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A00000000000000000000041 /* OshiLifeShare.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		A00000000000000000000031 /* OshiLife.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OshiLife.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A00000000000000000000032 /* OshiLifeShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OshiLifeShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A00000000000000000000033 /* OshiLifeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OshiLifeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A00000000000000000000034 /* OshiLifeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OshiLifeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A00000000000000000000035 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		A00000000000000000000036 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		A00000000000000000000037 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A00000000000000000000026 /* Exceptions for OshiLife folder in OshiLife target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (Info.plist, OshiLife.entitlements, );
+			target = A00000000000000000000011 /* OshiLife */;
+		};
+		A00000000000000000000027 /* Exceptions for ShareExtension folder in OshiLifeShare target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (Info.plist, ShareExtension.entitlements, );
+			target = A00000000000000000000012 /* OshiLifeShare */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		A00000000000000000000021 /* OshiLife */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A00000000000000000000026, ); path = OshiLife; sourceTree = "<group>"; };
+		A00000000000000000000022 /* Shared */ = {isa = PBXFileSystemSynchronizedRootGroup; path = Shared; sourceTree = "<group>"; };
+		A00000000000000000000023 /* ShareExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A00000000000000000000027, ); path = ShareExtension; sourceTree = "<group>"; };
+		A00000000000000000000024 /* OshiLifeTests */ = {isa = PBXFileSystemSynchronizedRootGroup; path = OshiLifeTests; sourceTree = "<group>"; };
+		A00000000000000000000025 /* OshiLifeUITests */ = {isa = PBXFileSystemSynchronizedRootGroup; path = OshiLifeUITests; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A00000000000000000000071 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A00000000000000000000072 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A00000000000000000000073 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A00000000000000000000074 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A00000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000021 /* OshiLife */,
+				A00000000000000000000022 /* Shared */,
+				A00000000000000000000023 /* ShareExtension */,
+				A00000000000000000000024 /* OshiLifeTests */,
+				A00000000000000000000025 /* OshiLifeUITests */,
+				A00000000000000000000004 /* Config */,
+				A00000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A00000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000031 /* OshiLife.app */,
+				A00000000000000000000032 /* OshiLifeShare.appex */,
+				A00000000000000000000033 /* OshiLifeTests.xctest */,
+				A00000000000000000000034 /* OshiLifeUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000004 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000037 /* Base.xcconfig */,
+				A00000000000000000000035 /* Debug.xcconfig */,
+				A00000000000000000000036 /* Release.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A00000000000000000000011 /* OshiLife */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000091 /* Build configuration list for PBXNativeTarget "OshiLife" */;
+			buildPhases = (
+				A00000000000000000000061 /* Sources */,
+				A00000000000000000000071 /* Frameworks */,
+				A00000000000000000000081 /* Resources */,
+				A00000000000000000000044 /* Embed App Extensions */,
+			);
+			buildRules = ();
+			dependencies = (A00000000000000000000054 /* PBXTargetDependency */, );
+			fileSystemSynchronizedGroups = (A00000000000000000000021 /* OshiLife */, A00000000000000000000022 /* Shared */, );
+			name = OshiLife;
+			packageProductDependencies = ();
+			productName = OshiLife;
+			productReference = A00000000000000000000031 /* OshiLife.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A00000000000000000000012 /* OshiLifeShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000092 /* Build configuration list for PBXNativeTarget "OshiLifeShare" */;
+			buildPhases = (A00000000000000000000062 /* Sources */, A00000000000000000000072 /* Frameworks */, A00000000000000000000082 /* Resources */, );
+			buildRules = ();
+			dependencies = ();
+			fileSystemSynchronizedGroups = (A00000000000000000000023 /* ShareExtension */, A00000000000000000000022 /* Shared */, );
+			name = OshiLifeShare;
+			packageProductDependencies = ();
+			productName = OshiLifeShare;
+			productReference = A00000000000000000000032 /* OshiLifeShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		A00000000000000000000013 /* OshiLifeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000093 /* Build configuration list for PBXNativeTarget "OshiLifeTests" */;
+			buildPhases = (A00000000000000000000063 /* Sources */, A00000000000000000000073 /* Frameworks */, A00000000000000000000083 /* Resources */, );
+			buildRules = ();
+			dependencies = (A00000000000000000000055 /* PBXTargetDependency */, );
+			fileSystemSynchronizedGroups = (A00000000000000000000024 /* OshiLifeTests */, );
+			name = OshiLifeTests;
+			packageProductDependencies = ();
+			productName = OshiLifeTests;
+			productReference = A00000000000000000000033 /* OshiLifeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		A00000000000000000000014 /* OshiLifeUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000094 /* Build configuration list for PBXNativeTarget "OshiLifeUITests" */;
+			buildPhases = (A00000000000000000000064 /* Sources */, A00000000000000000000074 /* Frameworks */, A00000000000000000000084 /* Resources */, );
+			buildRules = ();
+			dependencies = (A00000000000000000000056 /* PBXTargetDependency */, );
+			fileSystemSynchronizedGroups = (A00000000000000000000025 /* OshiLifeUITests */, );
+			name = OshiLifeUITests;
+			packageProductDependencies = ();
+			productName = OshiLifeUITests;
+			productReference = A00000000000000000000034 /* OshiLifeUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A00000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					A00000000000000000000011 = {CreatedOnToolsVersion = 26.0; };
+					A00000000000000000000012 = {CreatedOnToolsVersion = 26.0; };
+					A00000000000000000000013 = {CreatedOnToolsVersion = 26.0; TestTargetID = A00000000000000000000011; };
+					A00000000000000000000014 = {CreatedOnToolsVersion = 26.0; TestTargetID = A00000000000000000000011; };
+				};
+			};
+			buildConfigurationList = A00000000000000000000090 /* Build configuration list for PBXProject "OshiLife" */;
+			developmentRegion = ja;
+			hasScannedForEncodings = 0;
+			knownRegions = (ja, "zh-Hans", Base, );
+			mainGroup = A00000000000000000000002;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A00000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (A00000000000000000000011 /* OshiLife */, A00000000000000000000012 /* OshiLifeShare */, A00000000000000000000013 /* OshiLifeTests */, A00000000000000000000014 /* OshiLifeUITests */, );
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A00000000000000000000081 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A00000000000000000000082 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A00000000000000000000083 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A00000000000000000000084 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A00000000000000000000061 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A00000000000000000000062 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A00000000000000000000063 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A00000000000000000000064 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A00000000000000000000054 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A00000000000000000000012 /* OshiLifeShare */; targetProxy = A00000000000000000000051 /* PBXContainerItemProxy */; };
+		A00000000000000000000055 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A00000000000000000000011 /* OshiLife */; targetProxy = A00000000000000000000052 /* PBXContainerItemProxy */; };
+		A00000000000000000000056 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A00000000000000000000011 /* OshiLife */; targetProxy = A00000000000000000000053 /* PBXContainerItemProxy */; };
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A00000000000000000000101 /* Debug */ = {isa = XCBuildConfiguration; baseConfigurationReference = A00000000000000000000035 /* Debug.xcconfig */; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; COPY_PHASE_STRIP = NO; ENABLE_STRICT_OBJC_MSGSEND = YES; GCC_C_LANGUAGE_STANDARD = gnu17; GCC_OPTIMIZATION_LEVEL = 0; SDKROOT = iphoneos; }; name = Debug; };
+		A00000000000000000000102 /* Release */ = {isa = XCBuildConfiguration; baseConfigurationReference = A00000000000000000000036 /* Release.xcconfig */; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; ENABLE_NS_ASSERTIONS = NO; ENABLE_STRICT_OBJC_MSGSEND = YES; GCC_C_LANGUAGE_STANDARD = gnu17; SDKROOT = iphoneos; }; name = Release; };
+		A00000000000000000000111 /* Debug */ = {isa = XCBuildConfiguration; baseConfigurationReference = A00000000000000000000035 /* Debug.xcconfig */; buildSettings = {CODE_SIGN_ENTITLEMENTS = OshiLife/OshiLife.entitlements; INFOPLIST_FILE = OshiLife/Info.plist; PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER)"; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; }; name = Debug; };
+		A00000000000000000000112 /* Release */ = {isa = XCBuildConfiguration; baseConfigurationReference = A00000000000000000000036 /* Release.xcconfig */; buildSettings = {CODE_SIGN_ENTITLEMENTS = OshiLife/OshiLife.entitlements; INFOPLIST_FILE = OshiLife/Info.plist; PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER)"; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; }; name = Release; };
+		A00000000000000000000121 /* Debug */ = {isa = XCBuildConfiguration; baseConfigurationReference = A00000000000000000000035 /* Debug.xcconfig */; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements; INFOPLIST_FILE = ShareExtension/Info.plist; PRODUCT_BUNDLE_IDENTIFIER = "$(SHARE_EXTENSION_BUNDLE_IDENTIFIER)"; PRODUCT_NAME = OshiLifeShare; SKIP_INSTALL = YES; SWIFT_EMIT_LOC_STRINGS = YES; }; name = Debug; };
+		A00000000000000000000122 /* Release */ = {isa = XCBuildConfiguration; baseConfigurationReference = A00000000000000000000036 /* Release.xcconfig */; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements; INFOPLIST_FILE = ShareExtension/Info.plist; PRODUCT_BUNDLE_IDENTIFIER = "$(SHARE_EXTENSION_BUNDLE_IDENTIFIER)"; PRODUCT_NAME = OshiLifeShare; SKIP_INSTALL = YES; SWIFT_EMIT_LOC_STRINGS = YES; }; name = Release; };
+		A00000000000000000000131 /* Debug */ = {isa = XCBuildConfiguration; baseConfigurationReference = A00000000000000000000035 /* Debug.xcconfig */; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER).Tests"; PRODUCT_NAME = "$(TARGET_NAME)"; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OshiLife.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OshiLife"; }; name = Debug; };
+		A00000000000000000000132 /* Release */ = {isa = XCBuildConfiguration; baseConfigurationReference = A00000000000000000000036 /* Release.xcconfig */; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER).Tests"; PRODUCT_NAME = "$(TARGET_NAME)"; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OshiLife.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OshiLife"; }; name = Release; };
+		A00000000000000000000141 /* Debug */ = {isa = XCBuildConfiguration; baseConfigurationReference = A00000000000000000000035 /* Debug.xcconfig */; buildSettings = {GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER).UITests"; PRODUCT_NAME = "$(TARGET_NAME)"; TEST_TARGET_NAME = OshiLife; }; name = Debug; };
+		A00000000000000000000142 /* Release */ = {isa = XCBuildConfiguration; baseConfigurationReference = A00000000000000000000036 /* Release.xcconfig */; buildSettings = {GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER).UITests"; PRODUCT_NAME = "$(TARGET_NAME)"; TEST_TARGET_NAME = OshiLife; }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A00000000000000000000090 /* Build configuration list for PBXProject "OshiLife" */ = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000101 /* Debug */, A00000000000000000000102 /* Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A00000000000000000000091 /* Build configuration list for PBXNativeTarget "OshiLife" */ = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000111 /* Debug */, A00000000000000000000112 /* Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A00000000000000000000092 /* Build configuration list for PBXNativeTarget "OshiLifeShare" */ = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000121 /* Debug */, A00000000000000000000122 /* Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A00000000000000000000093 /* Build configuration list for PBXNativeTarget "OshiLifeTests" */ = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000131 /* Debug */, A00000000000000000000132 /* Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A00000000000000000000094 /* Build configuration list for PBXNativeTarget "OshiLifeUITests" */ = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000141 /* Debug */, A00000000000000000000142 /* Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+	};
+	rootObject = A00000000000000000000001 /* Project object */;
+}
