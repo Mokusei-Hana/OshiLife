@@ -31,10 +31,70 @@ struct LiveListView: View {
     }
 
     var body: some View {
-        @Bindable var viewModel = viewModel
         @Bindable var importCoordinator = importCoordinator
 
-        NavigationStack(path: $path) {
+        let navigation = navigationContent(viewModel: viewModel)
+        let lifecycleContent = navigation.task {
+            viewModel.load()
+            importCoordinator.checkQueue()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            viewModel.load()
+            importCoordinator.checkQueue()
+        }
+        .onOpenURL { importCoordinator.open(url: $0) }
+        let warningContent = lifecycleContent.safeAreaInset(edge: .top) {
+            if let startupWarning {
+                warningBanner(startupWarning)
+                    .padding(.horizontal, 12)
+            }
+        }
+        let editorContent = warningContent.sheet(item: $editorRoute) { route in
+            LiveEditorHost(
+                store: liveStore,
+                imageStore: imageStore,
+                event: route.event,
+                onSaved: { viewModel.load() }
+            )
+        }
+        let importContent = editorContent.sheet(item: $importCoordinator.current) { pending in
+            ImportEditorHost(
+                store: liveStore,
+                imageStore: imageStore,
+                pending: pending,
+                imageData: importCoordinator.currentImageData,
+                duplicate: importCoordinator.duplicateEvent,
+                onOpenDuplicate: { event in
+                    importCoordinator.discardCurrent()
+                    path.append(event.id)
+                },
+                onSaved: {
+                    importCoordinator.consumeCurrent()
+                    viewModel.load()
+                },
+                onDiscard: { importCoordinator.discardCurrent() }
+            )
+            .interactiveDismissDisabled()
+        }
+
+        return importContent.alert("common.error", isPresented: Binding(
+            get: { viewModel.errorMessage != nil || importCoordinator.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil; importCoordinator.errorMessage = nil } }
+        )) {
+            Button("common.ok") {
+                viewModel.errorMessage = nil
+                importCoordinator.errorMessage = nil
+            }
+        } message: {
+            Text(viewModel.errorMessage ?? importCoordinator.errorMessage ?? "")
+        }
+    }
+
+    private func navigationContent(viewModel: LiveListViewModel) -> some View {
+        @Bindable var viewModel = viewModel
+
+        return NavigationStack(path: $path) {
             Group {
                 if viewModel.isLoading && viewModel.events.isEmpty {
                     ProgressView("common.loading")
@@ -70,60 +130,6 @@ struct LiveListView: View {
             .navigationDestination(for: UUID.self) { id in
                 eventDestination(id: id, viewModel: viewModel)
             }
-        }
-        .task {
-            viewModel.load()
-            importCoordinator.checkQueue()
-        }
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active else { return }
-            viewModel.load()
-            importCoordinator.checkQueue()
-        }
-        .onOpenURL { importCoordinator.open(url: $0) }
-        .safeAreaInset(edge: .top) {
-            if let startupWarning {
-                warningBanner(startupWarning)
-                    .padding(.horizontal, 12)
-            }
-        }
-        .sheet(item: $editorRoute) { route in
-            LiveEditorHost(
-                store: liveStore,
-                imageStore: imageStore,
-                event: route.event,
-                onSaved: { viewModel.load() }
-            )
-        }
-        .sheet(item: $importCoordinator.current) { pending in
-            ImportEditorHost(
-                store: liveStore,
-                imageStore: imageStore,
-                pending: pending,
-                imageData: importCoordinator.currentImageData,
-                duplicate: importCoordinator.duplicateEvent,
-                onOpenDuplicate: { event in
-                    importCoordinator.discardCurrent()
-                    path.append(event.id)
-                },
-                onSaved: {
-                    importCoordinator.consumeCurrent()
-                    viewModel.load()
-                },
-                onDiscard: { importCoordinator.discardCurrent() }
-            )
-            .interactiveDismissDisabled()
-        }
-        .alert("common.error", isPresented: Binding(
-            get: { viewModel.errorMessage != nil || importCoordinator.errorMessage != nil },
-            set: { if !$0 { viewModel.errorMessage = nil; importCoordinator.errorMessage = nil } }
-        )) {
-            Button("common.ok") {
-                viewModel.errorMessage = nil
-                importCoordinator.errorMessage = nil
-            }
-        } message: {
-            Text(viewModel.errorMessage ?? importCoordinator.errorMessage ?? "")
         }
     }
 
