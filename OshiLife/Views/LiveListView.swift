@@ -68,20 +68,7 @@ struct LiveListView: View {
                 }
             }
             .navigationDestination(for: UUID.self) { id in
-                if let event = viewModel.events.first(where: { $0.id == id }) {
-                    LiveDetailView(
-                        event: event,
-                        imageStore: imageStore,
-                        onEdit: { editorRoute = EditorRoute(event: event) },
-                        onDelete: {
-                            viewModel.delete(event, imageStore: imageStore)
-                            path.removeAll { $0 == id }
-                        }
-                    )
-                    .navigationTransition(.zoom(sourceID: id, in: cardNamespace))
-                } else {
-                    ContentUnavailableView("error.missing_live", systemImage: "exclamationmark.triangle")
-                }
+                eventDestination(id: id, viewModel: viewModel)
             }
         }
         .task {
@@ -138,6 +125,26 @@ struct LiveListView: View {
         } message: {
             Text(viewModel.errorMessage ?? importCoordinator.errorMessage ?? "")
         }
+    }
+
+    @ViewBuilder
+    private func eventDestination(id: UUID, viewModel: LiveListViewModel) -> some View {
+        if let event = viewModel.events.first(where: { $0.id == id }) {
+            LiveDetailView(
+                event: event,
+                imageStore: imageStore,
+                onEdit: { editorRoute = EditorRoute(event: event) },
+                onDelete: { delete(event, id: id, viewModel: viewModel) }
+            )
+            .navigationTransition(.zoom(sourceID: id, in: cardNamespace))
+        } else {
+            ContentUnavailableView("error.missing_live", systemImage: "exclamationmark.triangle")
+        }
+    }
+
+    private func delete(_ event: LiveEvent, id: UUID, viewModel: LiveListViewModel) {
+        viewModel.delete(event, imageStore: imageStore)
+        path.removeAll { $0 == id }
     }
 
     private func filterMenu(
