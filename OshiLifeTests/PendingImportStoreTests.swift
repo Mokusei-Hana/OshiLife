@@ -22,7 +22,8 @@ final class PendingImportStoreTests: XCTestCase {
         let pending = PendingShareImport(
             sourceURL: try XCTUnwrap(URL(string: "https://x.com/oshi/status/42")),
             authorName: "推し",
-            postText: "ライブ情報"
+            postText: "ライブ情報",
+            createdAt: Date(timeIntervalSince1970: 100)
         )
         let imageData = Data([0x01, 0x02, 0x03])
 
