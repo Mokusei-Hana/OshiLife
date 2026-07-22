@@ -3,6 +3,7 @@ import SwiftData
 
 enum ModelContainerFactory {
     static func makePersistent() throws -> ModelContainer {
+        _ = try FileManager.default.oshiLifeSharedContainerURL()
         let schema = Schema(versionedSchema: OshiLifeSchemaV1.self)
         let configuration = ModelConfiguration(
             SharedConstants.databaseName,
