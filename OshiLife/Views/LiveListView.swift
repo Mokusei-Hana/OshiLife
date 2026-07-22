@@ -118,7 +118,6 @@ struct LiveListView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     filterMenu(selection: $viewModel.filter)
                 }
-                ToolbarSpacer(.flexible, placement: .topBar)
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("live.add", systemImage: "plus") {
                         editorRoute = EditorRoute(event: nil)
