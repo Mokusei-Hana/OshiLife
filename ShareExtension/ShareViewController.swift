@@ -1,6 +1,11 @@
 import UIKit
 import UniformTypeIdentifiers
 
+private struct ImportedShareInput: Sendable {
+    let postURL: URL
+    let imageData: Data?
+}
+
 @MainActor
 final class ShareViewController: UIViewController {
     private let titleLabel = UILabel()
@@ -71,10 +76,13 @@ final class ShareViewController: UIViewController {
                 return
             }
 
-            async let imageData = firstImageData(in: providers)
+            let input = ImportedShareInput(
+                postURL: postURL,
+                imageData: await firstImageData(in: providers)
+            )
             var pending = PendingShareImport(sourceURL: postURL)
             do {
-                let metadata = try await XOEmbedClient().fetch(postURL: postURL)
+                let metadata = try await XOEmbedClient().fetch(postURL: input.postURL)
                 pending.sourceURL = metadata.canonicalURL
                 pending.authorName = metadata.authorName
                 pending.postText = metadata.postText
@@ -86,7 +94,7 @@ final class ShareViewController: UIViewController {
 
             try Task.checkCancellation()
             let store = try PendingImportStore.appGroup()
-            pending = try store.stage(pending, imageData: await imageData)
+            pending = try store.stage(pending, imageData: input.imageData)
             guard let handoffURL = URL(string: "\(SharedConstants.importScheme)://import/\(pending.id.uuidString)") else {
                 throw PendingImportStoreError.invalidIdentifier
             }
@@ -106,25 +114,16 @@ final class ShareViewController: UIViewController {
 
     private func findPostURL(in providers: [NSItemProvider]) async throws -> URL? {
         for provider in providers where provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
-            if let value = try await loadItem(provider, type: .url) {
-                let url = (value as? URL) ?? (value as? NSURL).map { $0 as URL }
-                if let url, let normalized = XURLValidator.normalizedPostURL(from: url) { return normalized }
+            if let url = try await loadURL(provider),
+               let normalized = XURLValidator.normalizedPostURL(from: url) {
+                return normalized
             }
         }
 
         for provider in providers where provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
-            if let value = try await loadItem(provider, type: .plainText) {
-                let text: String?
-                if let string = value as? String {
-                    text = string
-                } else if let attributed = value as? NSAttributedString {
-                    text = attributed.string
-                } else if let data = value as? Data {
-                    text = String(data: data, encoding: .utf8)
-                } else {
-                    text = nil
-                }
-                if let text, let url = XURLValidator.firstPostURL(in: text) { return url }
+            if let text = try await loadText(provider),
+               let url = XURLValidator.firstPostURL(in: text) {
+                return url
             }
         }
         return nil
@@ -141,11 +140,48 @@ final class ShareViewController: UIViewController {
         return nil
     }
 
-    private func loadItem(_ provider: NSItemProvider, type: UTType) async throws -> NSSecureCoding? {
+    private func loadURL(_ provider: NSItemProvider) async throws -> URL? {
         try await withCheckedThrowingContinuation { continuation in
-            provider.loadItem(forTypeIdentifier: type.identifier, options: nil) { item, error in
-                if let error { continuation.resume(throwing: error) }
-                else { continuation.resume(returning: item) }
+            provider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) { item, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                let url: URL?
+                if let value = item as? URL {
+                    url = value
+                } else if let value = item as? NSURL {
+                    url = value as URL
+                } else if let value = item as? String {
+                    url = URL(string: value)
+                } else {
+                    url = nil
+                }
+                continuation.resume(returning: url)
+            }
+        }
+    }
+
+    private func loadText(_ provider: NSItemProvider) async throws -> String? {
+        try await withCheckedThrowingContinuation { continuation in
+            provider.loadItem(forTypeIdentifier: UTType.plainText.identifier, options: nil) { item, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                let text: String?
+                if let value = item as? String {
+                    text = value
+                } else if let value = item as? NSAttributedString {
+                    text = value.string
+                } else if let value = item as? Data {
+                    text = String(data: value, encoding: .utf8)
+                } else {
+                    text = nil
+                }
+                continuation.resume(returning: text)
             }
         }
     }
@@ -162,7 +198,7 @@ final class ShareViewController: UIViewController {
 
     private func requestOpen(_ url: URL) async -> Bool {
         guard let extensionContext else { return false }
-        await withCheckedContinuation { continuation in
+        return await withCheckedContinuation { continuation in
             extensionContext.open(url) { didOpen in
                 continuation.resume(returning: didOpen)
             }
