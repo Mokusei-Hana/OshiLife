@@ -56,15 +56,7 @@ struct LiveListView: View {
             .navigationTitle("app.name")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Menu {
-                        Picker("filter.title", selection: $viewModel.filter) {
-                            ForEach(LiveListViewModel.StatusFilter.allCases) { filter in
-                                Text(filter.title).tag(filter)
-                            }
-                        }
-                    } label: {
-                        Label(viewModel.filter.title, systemImage: "line.3.horizontal.decrease")
-                    }
+                    filterMenu(selection: $viewModel.filter)
                 }
                 ToolbarSpacer(.flexible, placement: .topBar)
                 ToolbarItem(placement: .topBarTrailing) {
@@ -145,6 +137,20 @@ struct LiveListView: View {
             }
         } message: {
             Text(viewModel.errorMessage ?? importCoordinator.errorMessage ?? "")
+        }
+    }
+
+    private func filterMenu(
+        selection: Binding<LiveListViewModel.StatusFilter>
+    ) -> some View {
+        Menu {
+            Picker("filter.title", selection: selection) {
+                ForEach(LiveListViewModel.StatusFilter.allCases) { filter in
+                    Text(filter.title).tag(filter)
+                }
+            }
+        } label: {
+            Label(selection.wrappedValue.title, systemImage: "line.3.horizontal.decrease")
         }
     }
 
