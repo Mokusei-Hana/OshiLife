@@ -49,16 +49,8 @@ struct LiveListView: View {
                             .accessibilityIdentifier("addLiveButton")
                     }
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 24) {
-                            ForEach(viewModel.filteredEvents) { event in
-                                eventCard(event)
-                            }
-                        }
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 14)
-                    }
-                    .refreshable { viewModel.load() }
+                    eventList(viewModel.filteredEvents)
+                        .refreshable { viewModel.load() }
                 }
             }
             .navigationTitle("app.name")
@@ -153,6 +145,18 @@ struct LiveListView: View {
             }
         } message: {
             Text(viewModel.errorMessage ?? importCoordinator.errorMessage ?? "")
+        }
+    }
+
+    private func eventList(_ events: [LiveEvent]) -> some View {
+        ScrollView {
+            LazyVStack(spacing: 24) {
+                ForEach(events) { event in
+                    eventCard(event)
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
         }
     }
 
