@@ -11,6 +11,7 @@ final class OshiLifeUITests: XCTestCase {
         app.launch()
 
         XCTAssertTrue(app.navigationBars["OshiLife"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["displayModeMenu"].waitForExistence(timeout: 3))
         let addButton = app.buttons["addLiveButton"].firstMatch
         XCTAssertTrue(addButton.waitForExistence(timeout: 3))
         addButton.tap()

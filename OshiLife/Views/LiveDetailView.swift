@@ -8,7 +8,6 @@ struct LiveDetailView: View {
 
     @State private var confirmsDelete = false
     @State private var mapError: String?
-    @State private var isOpeningMap = false
 
     var body: some View {
         ScrollView {
@@ -103,26 +102,36 @@ struct LiveDetailView: View {
         detailSection("detail.information") {
             VStack(alignment: .leading, spacing: 16) {
                 Label {
-                    VStack(alignment: .leading) {
+                    VStack(alignment: .leading, spacing: 14) {
                         Text(event.eventDate, format: .dateTime.year().month().day().weekday())
-                        if let openTime = event.openTime {
-                            LabeledContent("field.open_time") {
-                                Text(openTime, format: .dateTime.hour().minute())
+
+                        if event.openTime != nil || event.startTime != nil {
+                            HStack(alignment: .top, spacing: 16) {
+                                if let openTime = event.openTime {
+                                    timeDisplay(
+                                        title: "field.open_time",
+                                        time: openTime,
+                                        isProminent: false
+                                    )
+                                }
+                                if event.openTime != nil, event.startTime != nil {
+                                    Divider()
+                                }
+                                if let startTime = event.startTime {
+                                    timeDisplay(
+                                        title: "field.start_time",
+                                        time: startTime,
+                                        isProminent: true
+                                    )
+                                }
                             }
-                            .foregroundStyle(.secondary)
-                        }
-                        if let startTime = event.startTime {
-                            LabeledContent("field.start_time") {
-                                Text(startTime, format: .dateTime.hour().minute())
-                            }
-                            .foregroundStyle(.secondary)
                         }
                     }
                 } icon: {
                     Image(systemName: "calendar")
                 }
 
-                if !event.venue.isEmpty || !event.address.isEmpty {
+                if !event.venue.isEmpty || !event.address.isEmpty || hasMapCoordinates {
                     Label {
                         VStack(alignment: .leading) {
                             if !event.venue.isEmpty { Text(event.venue) }
@@ -134,17 +143,24 @@ struct LiveDetailView: View {
                         Image(systemName: "mappin.and.ellipse")
                     }
 
-                    Button {
-                        Task { await openMap() }
-                    } label: {
-                        if isOpeningMap {
-                            ProgressView().frame(maxWidth: .infinity)
-                        } else {
-                            Label("detail.open_maps", systemImage: "map").frame(maxWidth: .infinity)
+                    if hasMapCoordinates {
+                        Menu {
+                            Button {
+                                openMap(with: .apple)
+                            } label: {
+                                Label("map.apple", systemImage: "apple.logo")
+                            }
+                            Button {
+                                openMap(with: .google)
+                            } label: {
+                                Label("map.google", systemImage: "globe")
+                            }
+                        } label: {
+                            Label("detail.open_maps", systemImage: "map")
+                                .frame(maxWidth: .infinity)
                         }
+                        .buttonStyle(.glass)
                     }
-                    .buttonStyle(.glass)
-                    .disabled(isOpeningMap)
                 }
             }
         }
@@ -152,31 +168,75 @@ struct LiveDetailView: View {
 
     private var ticketSection: some View {
         detailSection("editor.tickets") {
-            VStack(alignment: .leading, spacing: 14) {
-                ForEach(event.ticketOptions) { option in
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(option.name).font(.body.weight(.medium))
-                            if let description = option.description, !description.isEmpty {
-                                Text(description)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("detail.available_tickets")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    ForEach(Array(event.ticketOptions.enumerated()), id: \.element.id) { index, option in
+                        ticketRow(option)
+                        if index < event.ticketOptions.count - 1 {
+                            Divider()
                         }
-                        Spacer()
-                        if let price = option.price {
-                            Text("¥\(price.formatted())")
-                                .monospacedDigit()
-                        }
-                        if event.selectedTicketID == option.id {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.tint)
-                                .accessibilityLabel(Text("ticket.selected"))
-                        }
+                    }
+                }
+
+                if let selectedTicket = event.selectedTicket {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Label("field.selected_ticket", systemImage: "checkmark.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.tint)
+                        ticketRow(selectedTicket, isSelected: true)
+                    }
+                    .padding(14)
+                    .background(.tint.opacity(0.12), in: .rect(cornerRadius: 14))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(.tint.opacity(0.45), lineWidth: 1)
                     }
                 }
             }
         }
+    }
+
+    private func timeDisplay(
+        title: LocalizedStringKey,
+        time: Date,
+        isProminent: Bool
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(isProminent ? .bold : .semibold))
+                .foregroundStyle(isProminent ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+            Text(time, format: .dateTime.hour().minute())
+                .font(isProminent ? .title.bold() : .title2.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(isProminent ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
+        }
+        .frame(maxWidth: .infinity, minHeight: 62, alignment: .leading)
+    }
+
+    private func ticketRow(_ option: TicketOption, isSelected: Bool = false) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(option.name)
+                    .font(.body.weight(isSelected ? .semibold : .medium))
+                if let description = option.description, !description.isEmpty {
+                    Text(description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 8)
+            if let price = option.price {
+                Text("¥\(price.formatted())")
+                    .fontWeight(isSelected ? .bold : .regular)
+                    .monospacedDigit()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .textSelection(.enabled)
     }
 
     private func detailSection<Content: View>(
@@ -192,14 +252,16 @@ struct LiveDetailView: View {
         .background(.regularMaterial, in: .rect(cornerRadius: 22))
     }
 
+    private var hasMapCoordinates: Bool {
+        MapService.hasValidCoordinates(latitude: event.latitude, longitude: event.longitude)
+    }
+
     @MainActor
-    private func openMap() async {
-        isOpeningMap = true
-        defer { isOpeningMap = false }
+    private func openMap(with provider: MapProvider) {
         do {
-            try await MapService().open(
+            try MapService().open(
+                provider: provider,
                 venue: event.venue,
-                address: event.address,
                 latitude: event.latitude,
                 longitude: event.longitude
             )

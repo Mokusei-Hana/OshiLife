@@ -5,12 +5,34 @@ private struct EditorRoute: Identifiable {
     let event: LiveEvent?
 }
 
+private enum EventDisplayMode: String, CaseIterable, Identifiable {
+    case list
+    case card
+
+    var id: String { rawValue }
+
+    var title: LocalizedStringResource {
+        switch self {
+        case .list: "display_mode.list"
+        case .card: "display_mode.card"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .list: "list.bullet"
+        case .card: "rectangle.grid.1x2"
+        }
+    }
+}
+
 struct LiveListView: View {
     @Environment(\.scenePhase) private var scenePhase
     private let liveStore: LiveStore
     private let imageStore: ImageStore
     private let startupWarning: String?
 
+    @AppStorage("eventDisplayMode") private var displayMode = EventDisplayMode.card
     @State private var viewModel: LiveListViewModel
     @State private var importCoordinator: PendingImportCoordinator
     @State private var editorRoute: EditorRoute?
@@ -121,7 +143,7 @@ struct LiveListView: View {
                             .accessibilityIdentifier("addLiveButton")
                     }
                 } else {
-                    eventList(viewModel.filteredEvents)
+                    eventList(viewModel.filteredEvents, displayMode: displayMode)
                         .refreshable { viewModel.load() }
                 }
             }
@@ -131,6 +153,7 @@ struct LiveListView: View {
                     filterMenu(selection: $viewModel.filter)
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    displayModeMenu
                     Button("manual_import.title", systemImage: "square.and.arrow.down") {
                         showsManualImport = true
                     }
@@ -146,6 +169,22 @@ struct LiveListView: View {
                 eventDestination(id: id, viewModel: viewModel)
             }
         }
+    }
+
+    private var displayModeMenu: some View {
+        Menu {
+            Picker("display_mode.title", selection: $displayMode) {
+                ForEach(EventDisplayMode.allCases) { mode in
+                    Label(mode.title, systemImage: mode.systemImage)
+                        .tag(mode)
+                }
+            }
+        } label: {
+            Image(systemName: displayMode.systemImage)
+        }
+        .accessibilityLabel(Text("display_mode.title"))
+        .accessibilityValue(Text(displayMode.title))
+        .accessibilityIdentifier("displayModeMenu")
     }
 
     @ViewBuilder
@@ -182,21 +221,33 @@ struct LiveListView: View {
         }
     }
 
-    private func eventList(_ events: [LiveEvent]) -> some View {
+    private func eventList(
+        _ events: [LiveEvent],
+        displayMode: EventDisplayMode
+    ) -> some View {
         ScrollView {
-            LazyVStack(spacing: 24) {
+            LazyVStack(spacing: displayMode == .card ? 16 : 10) {
                 ForEach(events) { event in
-                    eventCard(event)
+                    eventLink(event, displayMode: displayMode)
                 }
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 14)
         }
+        .animation(.snappy, value: displayMode)
     }
 
-    private func eventCard(_ event: LiveEvent) -> some View {
+    private func eventLink(
+        _ event: LiveEvent,
+        displayMode: EventDisplayMode
+    ) -> some View {
         NavigationLink(value: event.id) {
-            LiveCardView(event: event, imageStore: imageStore)
+            switch displayMode {
+            case .list:
+                LiveListRowView(event: event)
+            case .card:
+                LiveCardView(event: event, imageStore: imageStore)
+            }
         }
         .buttonStyle(.plain)
         .matchedTransitionSource(id: event.id, in: cardNamespace)
