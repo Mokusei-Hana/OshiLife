@@ -11,8 +11,13 @@ final class LiveEditorViewModel {
     var artistName: String
     var title: String
     var eventDate: Date?
+    var hasOpenTime: Bool
+    var openTime: Date
     var hasStartTime: Bool
     var startTime: Date
+    var performersText: String
+    var ticketOptions: [TicketOption]
+    var selectedTicketID: UUID?
     var venue: String
     var address: String
     var latitude: Double?
@@ -44,8 +49,15 @@ final class LiveEditorViewModel {
             ?? ""
         title = event?.title ?? importedDetails?.title ?? ""
         eventDate = event?.eventDate ?? importedDetails?.date
+        hasOpenTime = event?.openTime != nil || importedDetails?.openTime != nil
+        openTime = event?.openTime ?? importedDetails?.openTime ?? .now
         hasStartTime = event?.startTime != nil || importedDetails?.startTime != nil
         startTime = event?.startTime ?? importedDetails?.startTime ?? .now
+        performersText = event?.performers.joined(separator: " / ")
+            ?? importedDetails?.performers.joined(separator: " / ")
+            ?? ""
+        ticketOptions = event?.ticketOptions ?? importedDetails?.ticketOptions ?? []
+        selectedTicketID = event?.selectedTicketID
         venue = event?.venue ?? importedDetails?.venue ?? ""
         address = event?.address ?? ""
         latitude = event?.latitude
@@ -114,6 +126,10 @@ final class LiveEditorViewModel {
             if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { title = draft.eventDetails?.title ?? "" }
             if eventDate == nil { eventDate = draft.eventDetails?.date }
             if venue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { venue = draft.eventDetails?.venue ?? "" }
+            if !hasOpenTime, let importedOpen = draft.eventDetails?.openTime {
+                openTime = importedOpen
+                hasOpenTime = true
+            }
             if !hasStartTime, let importedStart = draft.eventDetails?.startTime {
                 startTime = importedStart
                 hasStartTime = true
@@ -123,6 +139,12 @@ final class LiveEditorViewModel {
             }
             if notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 notes = Self.importNotes(from: draft)
+            }
+            if ticketOptions.isEmpty {
+                ticketOptions = draft.eventDetails?.ticketOptions ?? []
+            }
+            if performersText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                performersText = draft.eventDetails?.performers.joined(separator: " / ") ?? ""
             }
             sourceURLString = draft.sourceURL.absoluteString
             importWarning = draft.warning
@@ -166,13 +188,20 @@ final class LiveEditorViewModel {
             event.artistName = artistName.trimmingCharacters(in: .whitespacesAndNewlines)
             event.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
             event.eventDate = eventDate
+            event.openTime = hasOpenTime ? openTime : nil
             event.startTime = hasStartTime ? startTime : nil
+            event.performers = performersText
+                .split(whereSeparator: { $0 == "/" || $0 == "／" || $0 == "、" || $0 == "," })
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
             event.venue = venue.trimmingCharacters(in: .whitespacesAndNewlines)
             event.address = address.trimmingCharacters(in: .whitespacesAndNewlines)
             event.latitude = latitude
             event.longitude = longitude
             event.ticketURLString = ticketURLString.trimmingCharacters(in: .whitespacesAndNewlines)
             event.sourceURLString = sourceURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+            event.ticketOptions = ticketOptions
+            event.selectedTicketID = selectedTicketID
             event.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
             event.status = status
             event.updatedAt = .now

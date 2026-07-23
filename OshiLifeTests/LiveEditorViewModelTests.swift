@@ -38,8 +38,13 @@ final class LiveEditorViewModelTests: XCTestCase {
             title: "HEROINES FES",
             date: date,
             venue: "Spotify O-EAST",
+            openTime: date.addingTimeInterval(17 * 60 * 60),
             startTime: date.addingTimeInterval(18 * 60 * 60),
             performers: ["iLiFE!", "のんふぃく！"],
+            ticketOptions: [
+                TicketOption(name: "Sチケット", price: 9000),
+                TicketOption(name: "Aチケット", price: 3500)
+            ],
             ticketInformation: "一般チケット ¥3,500",
             linkedURL: eventURL
         )
@@ -56,12 +61,20 @@ final class LiveEditorViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.title, "HEROINES FES")
         XCTAssertEqual(viewModel.eventDate, date)
         XCTAssertEqual(viewModel.venue, "Spotify O-EAST")
+        XCTAssertTrue(viewModel.hasOpenTime)
         XCTAssertTrue(viewModel.hasStartTime)
+        XCTAssertEqual(viewModel.performersText, "iLiFE! / のんふぃく！")
+        XCTAssertEqual(viewModel.ticketOptions.count, 2)
         XCTAssertEqual(viewModel.ticketURLString, eventURL.absoluteString)
         XCTAssertEqual(viewModel.sourceURLString, sourceURL.absoluteString)
         XCTAssertTrue(viewModel.notes.contains("一般チケット ¥3,500"))
 
         viewModel.title = "編集したタイトル"
+        viewModel.selectedTicketID = viewModel.ticketOptions[0].id
+        let saved = viewModel.save(imageStore: ImageStore(rootURL: FileManager.default.temporaryDirectory))
+        XCTAssertEqual(saved?.selectedTicketID, viewModel.ticketOptions[0].id)
+        XCTAssertEqual(saved?.selectedTicketName, "Sチケット")
+        XCTAssertEqual(saved?.ticketOptions.count, 2)
         XCTAssertEqual(viewModel.title, "編集したタイトル")
     }
 

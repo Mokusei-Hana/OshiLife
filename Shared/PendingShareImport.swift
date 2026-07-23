@@ -1,5 +1,19 @@
 import Foundation
 
+struct TicketOption: Codable, Hashable, Identifiable, Sendable {
+    let id: UUID
+    var name: String
+    var price: Int?
+    var description: String?
+
+    init(id: UUID = UUID(), name: String, price: Int? = nil, description: String? = nil) {
+        self.id = id
+        self.name = name
+        self.price = price
+        self.description = description
+    }
+}
+
 struct EventImportDetails: Codable, Hashable, Sendable {
     var title: String?
     var date: Date?
@@ -7,8 +21,21 @@ struct EventImportDetails: Codable, Hashable, Sendable {
     var openTime: Date?
     var startTime: Date?
     var performers: [String]
+    var ticketOptions: [TicketOption]
     var ticketInformation: String?
     var linkedURL: URL
+
+    private enum CodingKeys: String, CodingKey {
+        case title
+        case date
+        case venue
+        case openTime
+        case startTime
+        case performers
+        case ticketOptions
+        case ticketInformation
+        case linkedURL
+    }
 
     init(
         title: String? = nil,
@@ -17,6 +44,7 @@ struct EventImportDetails: Codable, Hashable, Sendable {
         openTime: Date? = nil,
         startTime: Date? = nil,
         performers: [String] = [],
+        ticketOptions: [TicketOption] = [],
         ticketInformation: String? = nil,
         linkedURL: URL
     ) {
@@ -26,8 +54,22 @@ struct EventImportDetails: Codable, Hashable, Sendable {
         self.openTime = openTime
         self.startTime = startTime
         self.performers = performers
+        self.ticketOptions = ticketOptions
         self.ticketInformation = ticketInformation
         self.linkedURL = linkedURL
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+        date = try container.decodeIfPresent(Date.self, forKey: .date)
+        venue = try container.decodeIfPresent(String.self, forKey: .venue)
+        openTime = try container.decodeIfPresent(Date.self, forKey: .openTime)
+        startTime = try container.decodeIfPresent(Date.self, forKey: .startTime)
+        performers = try container.decodeIfPresent([String].self, forKey: .performers) ?? []
+        ticketOptions = try container.decodeIfPresent([TicketOption].self, forKey: .ticketOptions) ?? []
+        ticketInformation = try container.decodeIfPresent(String.self, forKey: .ticketInformation)
+        linkedURL = try container.decode(URL.self, forKey: .linkedURL)
     }
 }
 

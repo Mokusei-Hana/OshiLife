@@ -4,7 +4,7 @@ import SwiftData
 enum ModelContainerFactory {
     static func makePersistent() throws -> ModelContainer {
         _ = try FileManager.default.oshiLifeSharedContainerURL()
-        let schema = Schema(versionedSchema: OshiLifeSchemaV2.self)
+        let schema = Schema(versionedSchema: OshiLifeSchemaV3.self)
         let configuration = ModelConfiguration(
             SharedConstants.databaseName,
             schema: schema,
@@ -20,7 +20,7 @@ enum ModelContainerFactory {
     }
 
     static func makeInMemory() throws -> ModelContainer {
-        let schema = Schema(versionedSchema: OshiLifeSchemaV2.self)
+        let schema = Schema(versionedSchema: OshiLifeSchemaV3.self)
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         return try ModelContainer(
             for: schema,

@@ -61,9 +61,20 @@ enum OshiLifeSchemaV2: VersionedSchema {
     static var models: [any PersistentModel.Type] { [LiveEvent.self] }
 }
 
+enum OshiLifeSchemaV3: VersionedSchema {
+    static let versionIdentifier = Schema.Version(3, 0, 0)
+    static var models: [any PersistentModel.Type] { [LiveEvent.self] }
+}
+
 enum OshiLifeMigrationPlan: SchemaMigrationPlan {
-    static var schemas: [any VersionedSchema.Type] { [OshiLifeSchemaV1.self, OshiLifeSchemaV2.self] }
+    static var schemas: [any VersionedSchema.Type] {
+        [OshiLifeSchemaV1.self, OshiLifeSchemaV2.self, OshiLifeSchemaV3.self]
+    }
+
     static var stages: [MigrationStage] {
-        [.lightweight(fromVersion: OshiLifeSchemaV1.self, toVersion: OshiLifeSchemaV2.self)]
+        [
+            .lightweight(fromVersion: OshiLifeSchemaV1.self, toVersion: OshiLifeSchemaV2.self),
+            .lightweight(fromVersion: OshiLifeSchemaV2.self, toVersion: OshiLifeSchemaV3.self)
+        ]
     }
 }

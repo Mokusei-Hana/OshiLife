@@ -30,6 +30,18 @@ struct LiveDetailView: View {
 
                 infoSection
 
+                if !event.performers.isEmpty {
+                    detailSection("field.performers") {
+                        Text(event.performers.joined(separator: " / "))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                    }
+                }
+
+                if !event.ticketOptions.isEmpty {
+                    ticketSection
+                }
+
                 if !event.notes.isEmpty {
                     detailSection("field.notes") {
                         Text(event.notes)
@@ -93,9 +105,17 @@ struct LiveDetailView: View {
                 Label {
                     VStack(alignment: .leading) {
                         Text(event.eventDate, format: .dateTime.year().month().day().weekday())
+                        if let openTime = event.openTime {
+                            LabeledContent("field.open_time") {
+                                Text(openTime, format: .dateTime.hour().minute())
+                            }
+                            .foregroundStyle(.secondary)
+                        }
                         if let startTime = event.startTime {
-                            Text(startTime, format: .dateTime.hour().minute())
-                                .foregroundStyle(.secondary)
+                            LabeledContent("field.start_time") {
+                                Text(startTime, format: .dateTime.hour().minute())
+                            }
+                            .foregroundStyle(.secondary)
                         }
                     }
                 } icon: {
@@ -125,6 +145,35 @@ struct LiveDetailView: View {
                     }
                     .buttonStyle(.glass)
                     .disabled(isOpeningMap)
+                }
+            }
+        }
+    }
+
+    private var ticketSection: some View {
+        detailSection("editor.tickets") {
+            VStack(alignment: .leading, spacing: 14) {
+                ForEach(event.ticketOptions) { option in
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(option.name).font(.body.weight(.medium))
+                            if let description = option.description, !description.isEmpty {
+                                Text(description)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        if let price = option.price {
+                            Text("¥\(price.formatted())")
+                                .monospacedDigit()
+                        }
+                        if event.selectedTicketID == option.id {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.tint)
+                                .accessibilityLabel(Text("ticket.selected"))
+                        }
+                    }
                 }
             }
         }

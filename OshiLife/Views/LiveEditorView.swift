@@ -137,6 +137,8 @@ struct LiveEditorView: View {
                 Section("editor.basic") {
                     TextField("field.artist", text: $viewModel.artistName)
                         .textContentType(.organizationName)
+                    TextField("field.performers", text: $viewModel.performersText, axis: .vertical)
+                        .lineLimit(1...3)
                     TextField("field.title", text: $viewModel.title, axis: .vertical)
                         .lineLimit(1...3)
                     Picker("field.status", selection: $viewModel.status) {
@@ -161,6 +163,10 @@ struct LiveEditorView: View {
                         Button("field.date.choose", systemImage: "calendar.badge.plus") {
                             viewModel.eventDate = .now
                         }
+                    }
+                    Toggle("field.open_time.enabled", isOn: $viewModel.hasOpenTime)
+                    if viewModel.hasOpenTime {
+                        DatePicker("field.open_time", selection: $viewModel.openTime, displayedComponents: .hourAndMinute)
                     }
                     Toggle("field.start_time.enabled", isOn: $viewModel.hasStartTime)
                     if viewModel.hasStartTime {
@@ -206,6 +212,34 @@ struct LiveEditorView: View {
                             }
                         }
                         .padding(.vertical, 4)
+                    }
+                }
+
+                if !viewModel.ticketOptions.isEmpty {
+                    Section("editor.tickets") {
+                        Picker("field.selected_ticket", selection: $viewModel.selectedTicketID) {
+                            Text("ticket.none").tag(UUID?.none)
+                            ForEach(viewModel.ticketOptions) { option in
+                                Text(ticketLabel(option)).tag(Optional(option.id))
+                            }
+                        }
+                        ForEach(viewModel.ticketOptions) { option in
+                            LabeledContent {
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    if let price = option.price {
+                                        Text("¥\(price.formatted())")
+                                            .monospacedDigit()
+                                    }
+                                    if let description = option.description, !description.isEmpty {
+                                        Text(description)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            } label: {
+                                Text(option.name)
+                            }
+                        }
                     }
                 }
 
@@ -267,6 +301,11 @@ struct LiveEditorView: View {
                 }
             }
         }
+    }
+
+    private func ticketLabel(_ option: TicketOption) -> String {
+        guard let price = option.price else { return option.name }
+        return "\(option.name) ¥\(price.formatted())"
     }
 
     private var coverSection: some View {

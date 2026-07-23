@@ -119,10 +119,12 @@ struct HeroinesEventPageParser: EventPageParsing, Sendable {
 
         let title = Self.eventTitle(in: eventText, html: html)
         let venue = Self.firstCapture(#"(?:^|\n)\s*[@＠]\s*([^\n]+)"#, in: eventText)
+            ?? Self.firstCapture(#"[@＠]\s*([^\n]+)"#, in: eventText)
             ?? Self.firstCapture(#"(?:会場|VENUE)\s*[：:]\s*([^\n]+)"#, in: eventText, caseInsensitive: true)
         let times = Self.times(in: eventText, eventDate: date)
         let performers = Self.performers(in: eventText)
-        let ticketInformation = Self.ticketInformation(in: eventText)
+        let ticketOptions = Self.ticketOptions(in: eventText)
+        let ticketInformation = Self.ticketInformation(in: eventText, options: ticketOptions)
 
         guard title != nil || venue != nil || times.open != nil || times.start != nil else { return nil }
         return EventImportDetails(
@@ -132,16 +134,23 @@ struct HeroinesEventPageParser: EventPageParsing, Sendable {
             openTime: times.open,
             startTime: times.start,
             performers: performers,
+            ticketOptions: ticketOptions,
             ticketInformation: ticketInformation,
             linkedURL: sourceURL
         )
     }
 
     private static func eventSection(in text: String) -> String {
-        guard let range = text.range(of: #"公演概要|イベント概要"#, options: .regularExpression) else {
-            return text
+        let patterns = [
+            #"(?:【|〖)\s*(?:公演概要|イベント概要)\s*(?:】|〗)"#,
+            #"(?:^|\n)\s*(?:公演概要|イベント概要)\s*(?:\n|$)"#
+        ]
+        for pattern in patterns {
+            if let range = text.range(of: pattern, options: .regularExpression) {
+                return String(text[range.upperBound...])
+            }
         }
-        return String(text[range.upperBound...])
+        return text
     }
 
     private static func plainText(from html: String) -> String {
@@ -178,6 +187,9 @@ struct HeroinesEventPageParser: EventPageParsing, Sendable {
     }
 
     private static func eventTitle(in text: String, html: String) -> String? {
+        if let quoted = firstCapture(#"(「[^」]+」)"#, in: text) {
+            return quoted
+        }
         let lines = text.components(separatedBy: .newlines)
         if let dateIndex = lines.firstIndex(where: { eventDate(in: $0) != nil }) {
             let preceding = lines[..<dateIndex].reversed().prefix(2).first(where: isLikelyTitle)
@@ -190,6 +202,9 @@ struct HeroinesEventPageParser: EventPageParsing, Sendable {
         }
         if let heading = firstCapture(#"(?is)<h1\b[^>]*>(.*?)</h1>"#, in: html) {
             let clean = plainText(from: heading)
+            if let quoted = firstCapture(#"(「[^」]+」)"#, in: clean) {
+                return quoted
+            }
             if !clean.isEmpty, clean != "NEWS" { return clean }
         }
         return nil
@@ -236,13 +251,58 @@ struct HeroinesEventPageParser: EventPageParsing, Sendable {
             .filter { !$0.isEmpty }
     }
 
-    private static func ticketInformation(in text: String) -> String? {
+    private static func ticketInformation(in text: String, options: [TicketOption]) -> String? {
         let lines = text.components(separatedBy: .newlines)
         guard let index = lines.firstIndex(where: {
             $0.range(of: #"チケット|TICKET"#, options: [.regularExpression, .caseInsensitive]) != nil
         }) else { return nil }
-        let result = lines[index...].prefix(8).joined(separator: "\n")
+        let result = lines[index...]
+            .prefix(max(8, options.count + 1))
+            .joined(separator: "\n")
         return result.isEmpty ? nil : result
+    }
+
+    private static func ticketOptions(in text: String) -> [TicketOption] {
+        let lines = text.components(separatedBy: .newlines)
+        guard let headerIndex = lines.firstIndex(where: {
+            $0.range(of: #"チケット|TICKET"#, options: [.regularExpression, .caseInsensitive]) != nil
+        }) else { return [] }
+
+        var options: [TicketOption] = []
+        for line in lines.dropFirst(headerIndex + 1).prefix(20) {
+            if line.range(of: #"^(?:注意|備考|※|▼|【|出演|会場|OPEN|START)"#, options: [.regularExpression, .caseInsensitive]) != nil {
+                if !options.isEmpty { break }
+                continue
+            }
+            guard let option = ticketOption(from: line) else {
+                if !options.isEmpty, !line.isEmpty { break }
+                continue
+            }
+            options.append(option)
+        }
+        return options
+    }
+
+    private static func ticketOption(from line: String) -> TicketOption? {
+        let pattern = #"^\s*(.+?)\s*(?:[¥￥]\s*)?([0-9][0-9,]*)\s*円?(?:\s+(.+))?\s*$"#
+        guard let values = captures(pattern, in: line, count: 3) else {
+            return nil
+        }
+        guard let price = Int(values[1].replacingOccurrences(of: ",", with: "")) else {
+            return nil
+        }
+        let rawName = values[0].trimmingCharacters(in: .whitespacesAndNewlines)
+        guard rawName.range(of: #"チケット|券|TICKET"#, options: [.regularExpression, .caseInsensitive]) != nil else {
+            return nil
+        }
+        let description = values.count > 2
+            ? values[2].trimmingCharacters(in: .whitespacesAndNewlines)
+            : ""
+        return TicketOption(
+            name: rawName,
+            price: price,
+            description: description.isEmpty ? nil : description
+        )
     }
 
     private static func captures(
