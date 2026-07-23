@@ -148,7 +148,12 @@ struct LiveDetailView: View {
         isOpeningMap = true
         defer { isOpeningMap = false }
         do {
-            try await MapService().open(venue: event.venue, address: event.address)
+            try await MapService().open(
+                venue: event.venue,
+                address: event.address,
+                latitude: event.latitude,
+                longitude: event.longitude
+            )
         } catch {
             mapError = error.localizedDescription
         }

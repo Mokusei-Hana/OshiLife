@@ -15,7 +15,21 @@ enum MapServiceError: LocalizedError {
 
 @MainActor
 struct MapService {
-    func open(venue: String, address: String) async throws {
+    func open(
+        venue: String,
+        address: String,
+        latitude: Double?,
+        longitude: Double?
+    ) async throws {
+        if let latitude, let longitude,
+           (-90...90).contains(latitude), (-180...180).contains(longitude) {
+            let item = MKMapItem(location: CLLocation(latitude: latitude, longitude: longitude), address: nil)
+            let trimmedVenue = venue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmedVenue.isEmpty { item.name = trimmedVenue }
+            item.openInMaps()
+            return
+        }
+
         let query = [venue, address]
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }

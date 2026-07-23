@@ -93,6 +93,7 @@ struct LiveEditorView: View {
     let onCancel: () -> Void
 
     @State private var selectedPhoto: PhotosPickerItem?
+    @State private var showsVenuePicker = false
 
     var body: some View {
         NavigationStack {
@@ -168,9 +169,44 @@ struct LiveEditorView: View {
                 }
 
                 Section("editor.location") {
-                    TextField("field.venue", text: $viewModel.venue)
-                    TextField("field.address", text: $viewModel.address, axis: .vertical)
-                        .lineLimit(1...3)
+                    if viewModel.venue.isEmpty && viewModel.address.isEmpty {
+                        Button {
+                            showsVenuePicker = true
+                        } label: {
+                            Label("venue.choose", systemImage: "map.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.glassProminent)
+                    } else {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Label {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(viewModel.venue)
+                                        .font(.headline)
+                                    if !viewModel.address.isEmpty {
+                                        Text(viewModel.address)
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            } icon: {
+                                Image(systemName: "mappin.and.ellipse")
+                                    .foregroundStyle(.tint)
+                            }
+
+                            HStack {
+                                Button("venue.change", systemImage: "map") {
+                                    showsVenuePicker = true
+                                }
+                                .buttonStyle(.glass)
+                                Button("venue.clear", systemImage: "xmark", role: .destructive) {
+                                    viewModel.clearVenue()
+                                }
+                                .buttonStyle(.glass)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
                 }
 
                 Section("editor.links") {
@@ -224,6 +260,11 @@ struct LiveEditorView: View {
                 Button("common.ok") { viewModel.errorMessage = nil }
             } message: {
                 Text(viewModel.errorMessage ?? "")
+            }
+            .sheet(isPresented: $showsVenuePicker) {
+                VenuePickerView { selection in
+                    viewModel.selectVenue(selection)
+                }
             }
         }
     }

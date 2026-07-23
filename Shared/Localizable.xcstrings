@@ -83,7 +83,14 @@
     "validation.source_url" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "元の投稿URLはhttpまたはhttpsで入力してください。" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "原帖链接必须使用http或https。" } } } },
     "validation.ticket_url" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "チケットURLはhttpまたはhttpsで入力してください。" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "票务链接必须使用http或https。" } } } },
     "validation.title" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "入力内容を確認してください" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请检查输入内容" } } } },
-    "validation.title_required" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "イベント名を入力してください。" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请输入演出名称。" } } } }
+    "validation.title_required" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "イベント名を入力してください。" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请输入演出名称。" } } } },
+    "venue.change" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "会場を変更" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "更改场地" } } } },
+    "venue.choose" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "マップから会場を選ぶ" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "从地图中选择场地" } } } },
+    "venue.clear" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "クリア" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "清除" } } } },
+    "venue.picker.title" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "会場を選ぶ" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "选择场地" } } } },
+    "venue.search.placeholder" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "会場名や住所を検索" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "搜索场地名称或地址" } } } },
+    "venue.search.prompt.message" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "候補から選ぶと、会場名・住所・位置情報が保存されます。" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "从建议中选择后，将保存场地名称、地址和位置信息。" } } } },
+    "venue.search.prompt.title" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "会場を検索" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "搜索场地" } } } }
   },
   "version" : "1.0"
 }

@@ -15,6 +15,8 @@ final class LiveEditorViewModel {
     var startTime: Date
     var venue: String
     var address: String
+    var latitude: Double?
+    var longitude: Double?
     var ticketURLString: String
     var sourceURLString: String
     var notes: String
@@ -42,6 +44,8 @@ final class LiveEditorViewModel {
         startTime = event?.startTime ?? .now
         venue = event?.venue ?? ""
         address = event?.address ?? ""
+        latitude = event?.latitude
+        longitude = event?.longitude
         ticketURLString = event?.ticketURLString ?? ""
         sourceURLString = event?.sourceURLString ?? pendingImport?.sourceURL.absoluteString ?? ""
         notes = event?.notes ?? pendingImport?.postText ?? ""
@@ -75,6 +79,20 @@ final class LiveEditorViewModel {
     }
 
     var canSave: Bool { validationMessages.isEmpty && !isSaving }
+
+    func selectVenue(_ selection: VenueSelection) {
+        venue = selection.name
+        address = selection.address
+        latitude = selection.latitude
+        longitude = selection.longitude
+    }
+
+    func clearVenue() {
+        venue = ""
+        address = ""
+        latitude = nil
+        longitude = nil
+    }
 
     func retryImportMetadata() async {
         guard let pendingImport else { return }
@@ -119,6 +137,8 @@ final class LiveEditorViewModel {
             event.startTime = hasStartTime ? startTime : nil
             event.venue = venue.trimmingCharacters(in: .whitespacesAndNewlines)
             event.address = address.trimmingCharacters(in: .whitespacesAndNewlines)
+            event.latitude = latitude
+            event.longitude = longitude
             event.ticketURLString = ticketURLString.trimmingCharacters(in: .whitespacesAndNewlines)
             event.sourceURLString = sourceURLString.trimmingCharacters(in: .whitespacesAndNewlines)
             event.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
