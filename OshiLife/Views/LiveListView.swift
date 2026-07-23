@@ -14,6 +14,8 @@ struct LiveListView: View {
     @State private var viewModel: LiveListViewModel
     @State private var importCoordinator: PendingImportCoordinator
     @State private var editorRoute: EditorRoute?
+    @State private var showsManualImport = false
+    @State private var manualImportDraft: PendingShareImport?
     @State private var path: [UUID] = []
     @Namespace private var cardNamespace
 
@@ -58,7 +60,17 @@ struct LiveListView: View {
                 onSaved: { viewModel.load() }
             )
         }
-        let importContent = editorContent.sheet(item: $importCoordinator.current) { pending in
+        let manualImportContent = editorContent.sheet(isPresented: $showsManualImport, onDismiss: {
+            guard let draft = manualImportDraft else { return }
+            manualImportDraft = nil
+            importCoordinator.presentManual(draft)
+        }) {
+            ManualXImportView { pending in
+                manualImportDraft = pending
+                showsManualImport = false
+            }
+        }
+        let importContent = manualImportContent.sheet(item: $importCoordinator.current) { pending in
             ImportEditorHost(
                 store: liveStore,
                 imageStore: imageStore,
@@ -118,7 +130,11 @@ struct LiveListView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     filterMenu(selection: $viewModel.filter)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button("manual_import.title", systemImage: "square.and.arrow.down") {
+                        showsManualImport = true
+                    }
+                    .accessibilityIdentifier("manualXImportEntryButton")
                     Button("live.add", systemImage: "plus") {
                         editorRoute = EditorRoute(event: nil)
                     }

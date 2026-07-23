@@ -15,16 +15,25 @@ enum XURLValidator {
         guard segments.count >= 3,
               segments[1].lowercased() == "status",
               !segments[0].isEmpty,
-              segments[2].allSatisfy(\.isNumber) else {
+              segments[2].allSatisfy({ $0.isASCII && $0.isNumber }) else {
             return nil
         }
 
         components.scheme = "https"
         components.host = "x.com"
+        components.user = nil
+        components.password = nil
+        components.port = nil
         components.path = "/\(segments[0])/status/\(segments[2])"
         components.query = nil
         components.fragment = nil
         return components.url
+    }
+
+    static func normalizedPostURL(from text: String) -> URL? {
+        let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty, let candidate = URL(string: value) else { return nil }
+        return normalizedPostURL(from: candidate)
     }
 
     static func firstPostURL(in text: String) -> URL? {

@@ -22,10 +22,20 @@ final class XURLValidatorTests: XCTestCase {
         XCTAssertNil(XURLValidator.normalizedPostURL(from: try XCTUnwrap(URL(string: "https://example.com/a/status/1"))))
         XCTAssertNil(XURLValidator.normalizedPostURL(from: try XCTUnwrap(URL(string: "https://x.com/a/photo/1"))))
         XCTAssertNil(XURLValidator.normalizedPostURL(from: try XCTUnwrap(URL(string: "https://x.com/a/status/not-a-number"))))
+        XCTAssertNil(XURLValidator.normalizedPostURL(from: try XCTUnwrap(URL(string: "https://x.com/a/status/１２３"))))
     }
 
     func testExtractsFirstValidURLFromText() {
         let text = "こちら https://example.com/nope と https://twitter.com/oshi/status/42?s=20"
         XCTAssertEqual(XURLValidator.firstPostURL(in: text)?.absoluteString, "https://x.com/oshi/status/42")
+    }
+
+    func testNormalizesPastedURLTextAndRejectsInvalidText() {
+        XCTAssertEqual(
+            XURLValidator.normalizedPostURL(from: "  https://www.twitter.com/oshi/status/42?s=20\n")?.absoluteString,
+            "https://x.com/oshi/status/42"
+        )
+        XCTAssertNil(XURLValidator.normalizedPostURL(from: "not a URL"))
+        XCTAssertNil(XURLValidator.normalizedPostURL(from: "https://x.com/oshi"))
     }
 }

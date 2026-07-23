@@ -44,6 +44,16 @@ final class PendingImportCoordinator {
         }
     }
 
+    func presentManual(_ pending: PendingShareImport) {
+        current = pending
+        currentImageData = nil
+        do {
+            duplicateEvent = try liveStore.event(sourceURLString: pending.sourceURL.absoluteString)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func discardCurrent() {
         if let id = current?.id { try? pendingStore?.remove(id: id) }
         clear()

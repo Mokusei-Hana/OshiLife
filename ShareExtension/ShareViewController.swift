@@ -80,17 +80,7 @@ final class ShareViewController: UIViewController {
                 postURL: postURL,
                 imageData: await firstImageData(in: providers)
             )
-            var pending = PendingShareImport(sourceURL: postURL)
-            do {
-                let metadata = try await XOEmbedClient().fetch(postURL: input.postURL)
-                pending.sourceURL = metadata.canonicalURL
-                pending.authorName = metadata.authorName
-                pending.postText = metadata.postText
-            } catch is CancellationError {
-                throw CancellationError()
-            } catch {
-                pending.warning = String(localized: "share.metadata_warning \(error.localizedDescription)")
-            }
+            var pending = try await XImportDraftBuilder().makeDraft(from: input.postURL)
 
             try Task.checkCancellation()
             let store = try PendingImportStore.appGroup()
