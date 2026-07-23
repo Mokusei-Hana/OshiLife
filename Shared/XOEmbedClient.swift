@@ -24,6 +24,14 @@ struct XOEmbedMetadata: Sendable {
     let canonicalURL: URL
     let authorName: String
     let postText: String?
+    let linkedURLs: [URL]
+
+    init(canonicalURL: URL, authorName: String, postText: String?, linkedURLs: [URL] = []) {
+        self.canonicalURL = canonicalURL
+        self.authorName = authorName
+        self.postText = postText
+        self.linkedURLs = linkedURLs
+    }
 }
 
 enum XOEmbedError: LocalizedError {
@@ -75,8 +83,27 @@ struct XOEmbedClient: Sendable {
         return XOEmbedMetadata(
             canonicalURL: XURLValidator.normalizedPostURL(from: decoded.url) ?? normalized,
             authorName: decoded.authorName,
-            postText: Self.postText(from: decoded.html)
+            postText: Self.postText(from: decoded.html),
+            linkedURLs: Self.linkedURLs(from: decoded.html)
         )
+    }
+
+    static func linkedURLs(from html: String) -> [URL] {
+        guard let expression = try? NSRegularExpression(
+            pattern: #"<a\b[^>]*\bhref\s*=\s*["']([^"']+)["']"#,
+            options: [.caseInsensitive]
+        ) else { return [] }
+
+        var seen = Set<URL>()
+        return expression.matches(in: html, range: NSRange(html.startIndex..., in: html)).compactMap { match in
+            guard let range = Range(match.range(at: 1), in: html) else { return nil }
+            let value = String(html[range])
+                .replacingOccurrences(of: "&amp;", with: "&")
+            guard let url = URL(string: value),
+                  ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
+                  seen.insert(url).inserted else { return nil }
+            return url
+        }
     }
 
     static func postText(from html: String) -> String? {

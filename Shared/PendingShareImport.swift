@@ -1,5 +1,36 @@
 import Foundation
 
+struct EventImportDetails: Codable, Hashable, Sendable {
+    var title: String?
+    var date: Date?
+    var venue: String?
+    var openTime: Date?
+    var startTime: Date?
+    var performers: [String]
+    var ticketInformation: String?
+    var linkedURL: URL
+
+    init(
+        title: String? = nil,
+        date: Date? = nil,
+        venue: String? = nil,
+        openTime: Date? = nil,
+        startTime: Date? = nil,
+        performers: [String] = [],
+        ticketInformation: String? = nil,
+        linkedURL: URL
+    ) {
+        self.title = title
+        self.date = date
+        self.venue = venue
+        self.openTime = openTime
+        self.startTime = startTime
+        self.performers = performers
+        self.ticketInformation = ticketInformation
+        self.linkedURL = linkedURL
+    }
+}
+
 struct PendingShareImport: Codable, Identifiable, Hashable, Sendable {
     let id: UUID
     var sourceURL: URL
@@ -8,6 +39,7 @@ struct PendingShareImport: Codable, Identifiable, Hashable, Sendable {
     var imageRelativePath: String?
     var createdAt: Date
     var warning: String?
+    var eventDetails: EventImportDetails?
 
     init(
         id: UUID = UUID(),
@@ -16,7 +48,8 @@ struct PendingShareImport: Codable, Identifiable, Hashable, Sendable {
         postText: String? = nil,
         imageRelativePath: String? = nil,
         createdAt: Date = .now,
-        warning: String? = nil
+        warning: String? = nil,
+        eventDetails: EventImportDetails? = nil
     ) {
         self.id = id
         self.sourceURL = sourceURL
@@ -25,6 +58,7 @@ struct PendingShareImport: Codable, Identifiable, Hashable, Sendable {
         self.imageRelativePath = imageRelativePath
         self.createdAt = createdAt
         self.warning = warning
+        self.eventDetails = eventDetails
     }
 }
 

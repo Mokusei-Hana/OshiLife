@@ -29,6 +29,42 @@ final class LiveEditorViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.eventDate)
     }
 
+    func testImportMapsParsedEventFieldsIntoEditableEditor() throws {
+        let store = LiveStore(container: try ModelContainerFactory.makeInMemory())
+        let sourceURL = try XCTUnwrap(URL(string: "https://x.com/oshi/status/42"))
+        let eventURL = try XCTUnwrap(URL(string: "https://heroines.jp/news/event"))
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let details = EventImportDetails(
+            title: "HEROINES FES",
+            date: date,
+            venue: "Spotify O-EAST",
+            startTime: date.addingTimeInterval(18 * 60 * 60),
+            performers: ["iLiFE!", "のんふぃく！"],
+            ticketInformation: "一般チケット ¥3,500",
+            linkedURL: eventURL
+        )
+        let pending = PendingShareImport(
+            sourceURL: sourceURL,
+            authorName: "公式",
+            postText: "ライブ告知",
+            eventDetails: details
+        )
+
+        let viewModel = LiveEditorViewModel(store: store, pendingImport: pending)
+
+        XCTAssertEqual(viewModel.artistName, "iLiFE! / のんふぃく！")
+        XCTAssertEqual(viewModel.title, "HEROINES FES")
+        XCTAssertEqual(viewModel.eventDate, date)
+        XCTAssertEqual(viewModel.venue, "Spotify O-EAST")
+        XCTAssertTrue(viewModel.hasStartTime)
+        XCTAssertEqual(viewModel.ticketURLString, eventURL.absoluteString)
+        XCTAssertEqual(viewModel.sourceURLString, sourceURL.absoluteString)
+        XCTAssertTrue(viewModel.notes.contains("一般チケット ¥3,500"))
+
+        viewModel.title = "編集したタイトル"
+        XCTAssertEqual(viewModel.title, "編集したタイトル")
+    }
+
     func testVenueSelectionSavesResolvedLocation() throws {
         let store = LiveStore(container: try ModelContainerFactory.makeInMemory())
         let viewModel = LiveEditorViewModel(store: store)

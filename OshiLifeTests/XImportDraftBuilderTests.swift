@@ -12,6 +12,14 @@ final class XImportDraftBuilderTests: XCTestCase {
         }
     }
 
+    private struct StubEventLinkImporter: EventLinkImporting {
+        var details: EventImportDetails?
+
+        func importDetails(from urls: [URL]) async throws -> EventImportDetails? {
+            details
+        }
+    }
+
     func testBuildsDraftFromOEmbedMetadata() async throws {
         let canonicalURL = try XCTUnwrap(URL(string: "https://x.com/oshi/status/42"))
         let metadata = XOEmbedMetadata(
@@ -27,6 +35,33 @@ final class XImportDraftBuilderTests: XCTestCase {
         XCTAssertEqual(draft.authorName, "推し")
         XCTAssertEqual(draft.postText, "ライブ情報")
         XCTAssertNil(draft.warning)
+    }
+
+    func testAddsParsedEventDetailsToEditableDraft() async throws {
+        let canonicalURL = try XCTUnwrap(URL(string: "https://x.com/oshi/status/42"))
+        let eventURL = try XCTUnwrap(URL(string: "https://heroines.jp/news/event"))
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let metadata = XOEmbedMetadata(
+            canonicalURL: canonicalURL,
+            authorName: "推し",
+            postText: "ライブ情報",
+            linkedURLs: [eventURL]
+        )
+        let details = EventImportDetails(
+            title: "HEROINES FES",
+            date: date,
+            venue: "Spotify O-EAST",
+            performers: ["iLiFE!", "のんふぃく！"],
+            linkedURL: eventURL
+        )
+
+        let draft = try await XImportDraftBuilder(
+            client: StubClient(metadata: metadata),
+            eventLinkImporter: StubEventLinkImporter(details: details)
+        ).makeDraft(from: canonicalURL)
+
+        XCTAssertEqual(draft.eventDetails, details)
+        XCTAssertEqual(draft.postText, "ライブ情報")
     }
 
     func testBuildsEditableDraftWhenMetadataFetchFails() async throws {

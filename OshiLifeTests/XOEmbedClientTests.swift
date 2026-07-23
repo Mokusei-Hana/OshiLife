@@ -35,6 +35,21 @@ final class XOEmbedClientTests: XCTestCase {
         XCTAssertNil(XOEmbedClient.postText(from: "<blockquote>No paragraph</blockquote>"))
     }
 
+    func testExtractsAndDeduplicatesLinkTargets() {
+        let html = #"""
+        <p>
+          <a href="https://heroines.jp/news/event?a=1&amp;b=2">詳細</a>
+          <a href="https://heroines.jp/news/event?a=1&amp;b=2">同じ詳細</a>
+          <a href="mailto:info@example.com">メール</a>
+        </p>
+        """#
+
+        XCTAssertEqual(
+            XOEmbedClient.linkedURLs(from: html).map(\.absoluteString),
+            ["https://heroines.jp/news/event?a=1&b=2"]
+        )
+    }
+
     func testFetchDecodesMetadata() async throws {
         URLProtocolStub.response = (200, Data(#"{"url":"https://x.com/oshi/status/42","author_name":"推し","author_url":"https://x.com/oshi","html":"<blockquote><p>ライブ情報</p></blockquote>"}"#.utf8))
         let configuration = URLSessionConfiguration.ephemeral

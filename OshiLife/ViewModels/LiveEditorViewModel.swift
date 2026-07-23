@@ -37,18 +37,22 @@ final class LiveEditorViewModel {
         self.store = store
         existingEvent = event
         self.pendingImport = pendingImport
-        artistName = event?.artistName ?? pendingImport?.authorName ?? ""
-        title = event?.title ?? ""
-        eventDate = event?.eventDate
-        hasStartTime = event?.startTime != nil
-        startTime = event?.startTime ?? .now
-        venue = event?.venue ?? ""
+        let importedDetails = pendingImport?.eventDetails
+        artistName = event?.artistName
+            ?? (importedDetails?.performers.isEmpty == false ? importedDetails?.performers.joined(separator: " / ") : nil)
+            ?? pendingImport?.authorName
+            ?? ""
+        title = event?.title ?? importedDetails?.title ?? ""
+        eventDate = event?.eventDate ?? importedDetails?.date
+        hasStartTime = event?.startTime != nil || importedDetails?.startTime != nil
+        startTime = event?.startTime ?? importedDetails?.startTime ?? .now
+        venue = event?.venue ?? importedDetails?.venue ?? ""
         address = event?.address ?? ""
         latitude = event?.latitude
         longitude = event?.longitude
-        ticketURLString = event?.ticketURLString ?? ""
+        ticketURLString = event?.ticketURLString ?? importedDetails?.linkedURL.absoluteString ?? ""
         sourceURLString = event?.sourceURLString ?? pendingImport?.sourceURL.absoluteString ?? ""
-        notes = event?.notes ?? pendingImport?.postText ?? ""
+        notes = event?.notes ?? Self.importNotes(from: pendingImport)
         status = event?.status ?? .planned
         coverImageData = pendingImageData
         importWarning = pendingImport?.warning
@@ -99,18 +103,46 @@ final class LiveEditorViewModel {
         isRetryingMetadata = true
         defer { isRetryingMetadata = false }
         do {
-            let metadata = try await XOEmbedClient().fetch(postURL: pendingImport.sourceURL)
+            let draft = try await XImportDraftBuilder().makeDraft(from: pendingImport.sourceURL)
             if artistName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                artistName = metadata.authorName
+                if draft.eventDetails?.performers.isEmpty == false {
+                    artistName = draft.eventDetails?.performers.joined(separator: " / ") ?? ""
+                } else {
+                    artistName = draft.authorName ?? ""
+                }
+            }
+            if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { title = draft.eventDetails?.title ?? "" }
+            if eventDate == nil { eventDate = draft.eventDetails?.date }
+            if venue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { venue = draft.eventDetails?.venue ?? "" }
+            if !hasStartTime, let importedStart = draft.eventDetails?.startTime {
+                startTime = importedStart
+                hasStartTime = true
+            }
+            if ticketURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                ticketURLString = draft.eventDetails?.linkedURL.absoluteString ?? ""
             }
             if notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                notes = metadata.postText ?? ""
+                notes = Self.importNotes(from: draft)
             }
-            sourceURLString = metadata.canonicalURL.absoluteString
-            importWarning = nil
+            sourceURLString = draft.sourceURL.absoluteString
+            importWarning = draft.warning
         } catch {
             importWarning = String(localized: "share.metadata_warning \(error.localizedDescription)")
         }
+    }
+
+    private static func importNotes(from pending: PendingShareImport?) -> String {
+        guard let pending else { return "" }
+        var sections = [pending.postText].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if let openTime = pending.eventDetails?.openTime {
+            sections.append("OPEN \(openTime.formatted(date: .omitted, time: .shortened))")
+        }
+        if let ticketInformation = pending.eventDetails?.ticketInformation,
+           !ticketInformation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            sections.append(ticketInformation)
+        }
+        return sections.joined(separator: "\n\n")
     }
 
     @discardableResult

@@ -8,9 +8,14 @@ extension XOEmbedClient: XOEmbedFetching {}
 
 struct XImportDraftBuilder: Sendable {
     private let client: any XOEmbedFetching
+    private let eventLinkImporter: any EventLinkImporting
 
-    init(client: any XOEmbedFetching = XOEmbedClient()) {
+    init(
+        client: any XOEmbedFetching = XOEmbedClient(),
+        eventLinkImporter: any EventLinkImporting = EventLinkImporter()
+    ) {
         self.client = client
+        self.eventLinkImporter = eventLinkImporter
     }
 
     func makeDraft(from candidate: URL) async throws -> PendingShareImport {
@@ -24,6 +29,10 @@ struct XImportDraftBuilder: Sendable {
             draft.sourceURL = metadata.canonicalURL
             draft.authorName = metadata.authorName
             draft.postText = metadata.postText
+            let contentURLs = metadata.linkedURLs + EventLinkImporter.urls(in: metadata.postText ?? "")
+            if let details = try await eventLinkImporter.importDetails(from: contentURLs) {
+                draft.eventDetails = details
+            }
         } catch is CancellationError {
             throw CancellationError()
         } catch {
