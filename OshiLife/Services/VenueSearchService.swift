@@ -4,7 +4,7 @@ import Observation
 
 @MainActor
 @Observable
-final class VenueSearchService: NSObject, MKLocalSearchCompleterDelegate {
+final class VenueSearchService: NSObject, @preconcurrency MKLocalSearchCompleterDelegate {
     var query = "" {
         didSet { completer.queryFragment = query.trimmingCharacters(in: .whitespacesAndNewlines) }
     }
