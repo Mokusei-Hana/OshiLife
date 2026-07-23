@@ -39,7 +39,8 @@ final class ManualXImportViewModelTests: XCTestCase {
         let viewModel = ManualXImportViewModel()
         viewModel.urlString = "https://example.com/not-x"
 
-        XCTAssertNil(await viewModel.importDraft())
+        let draft = await viewModel.importDraft()
+        XCTAssertNil(draft)
         XCTAssertNotNil(viewModel.errorMessage)
     }
 }
