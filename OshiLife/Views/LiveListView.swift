@@ -185,13 +185,15 @@ struct LiveListView: View {
     }
 
     private func homeContent(_ events: [LiveEvent]) -> some View {
-        let scheduled = events.filter { $0.status != .attended }
-        let upcoming = scheduled
-            .filter { $0.eventDate >= .now }
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            homeContent(events, now: context.date)
+        }
+    }
+
+    private func homeContent(_ events: [LiveEvent], now: Date) -> some View {
+        let upcoming = events
+            .filter { $0.status == .planned && $0.eventDate > now }
             .sorted { $0.eventDate < $1.eventDate }
-        let carouselEvents = upcoming.isEmpty
-            ? scheduled.sorted { $0.eventDate > $1.eventDate }
-            : upcoming
         let history = events
             .filter { $0.status == .attended }
             .sorted { $0.eventDate > $1.eventDate }
@@ -200,17 +202,17 @@ struct LiveListView: View {
             LazyVStack(alignment: .leading, spacing: 28) {
                 VStack(alignment: .leading, spacing: 14) {
                     sectionTitle("home.upcoming", systemImage: "calendar.badge.clock")
-                    if carouselEvents.isEmpty {
+                    if upcoming.isEmpty {
                         ContentUnavailableView("home.no_upcoming", systemImage: "calendar")
                             .frame(maxWidth: .infinity)
                             .frame(height: 180)
                     } else {
-                        eventCarousel(carouselEvents)
+                        eventCarousel(upcoming)
                     }
                 }
 
-                if let nextEvent = upcoming.first(where: { $0.status == .planned }) {
-                    countdownCard(for: nextEvent)
+                if let nextEvent = upcoming.first {
+                    countdownCard(for: nextEvent, now: now)
                 }
 
                 if !history.isEmpty {
@@ -320,33 +322,31 @@ struct LiveListView: View {
             .padding(.horizontal, 18)
     }
 
-    private func countdownCard(for event: LiveEvent) -> some View {
-        TimelineView(.periodic(from: .now, by: 60)) { context in
-            VStack(alignment: .leading, spacing: 10) {
-                Label("home.next_live", systemImage: "timer")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-                HStack(alignment: .lastTextBaseline, spacing: 10) {
-                    Text(countdownText(until: event.eventDate, now: context.date))
-                        .font(.system(size: 38, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                    Text(event.title)
-                        .font(.subheadline.weight(.medium))
-                        .lineLimit(1)
-                }
-                Text(event.eventDate, format: .dateTime.year().month().day().weekday())
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+    private func countdownCard(for event: LiveEvent, now: Date) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("home.next_live", systemImage: "timer")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+            HStack(alignment: .lastTextBaseline, spacing: 10) {
+                Text(countdownText(until: event.eventDate, now: now))
+                    .font(.system(size: 38, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                Text(event.title)
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(20)
-            .background(.tint.opacity(0.12), in: .rect(cornerRadius: 22))
-            .overlay {
-                RoundedRectangle(cornerRadius: 22)
-                    .stroke(.tint.opacity(0.25), lineWidth: 1)
-            }
-            .padding(.horizontal, 18)
+            Text(event.eventDate, format: .dateTime.year().month().day().weekday())
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .background(.tint.opacity(0.12), in: .rect(cornerRadius: 22))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(.tint.opacity(0.25), lineWidth: 1)
+        }
+        .padding(.horizontal, 18)
     }
 
     private func countdownText(until date: Date, now: Date) -> String {
