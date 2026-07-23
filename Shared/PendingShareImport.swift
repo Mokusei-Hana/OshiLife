@@ -79,9 +79,23 @@ struct PendingShareImport: Codable, Identifiable, Hashable, Sendable {
     var authorName: String?
     var postText: String?
     var imageRelativePath: String?
+    // Downloaded media is kept only while the draft is in memory. Staged imports
+    // store the bytes in the pending directory instead.
+    var imageData: Data?
     var createdAt: Date
     var warning: String?
     var eventDetails: EventImportDetails?
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case sourceURL
+        case authorName
+        case postText
+        case imageRelativePath
+        case createdAt
+        case warning
+        case eventDetails
+    }
 
     init(
         id: UUID = UUID(),
@@ -89,6 +103,7 @@ struct PendingShareImport: Codable, Identifiable, Hashable, Sendable {
         authorName: String? = nil,
         postText: String? = nil,
         imageRelativePath: String? = nil,
+        imageData: Data? = nil,
         createdAt: Date = .now,
         warning: String? = nil,
         eventDetails: EventImportDetails? = nil
@@ -98,6 +113,7 @@ struct PendingShareImport: Codable, Identifiable, Hashable, Sendable {
         self.authorName = authorName
         self.postText = postText
         self.imageRelativePath = imageRelativePath
+        self.imageData = imageData
         self.createdAt = createdAt
         self.warning = warning
         self.eventDetails = eventDetails
@@ -135,9 +151,11 @@ struct PendingImportStore {
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
 
         var staged = value
-        if let imageData, !imageData.isEmpty {
+        let imageToStage = imageData?.isEmpty == false ? imageData : value.imageData
+        staged.imageData = nil
+        if let imageToStage, !imageToStage.isEmpty {
             let imageName = "shared-image"
-            try imageData.write(to: directory.appending(path: imageName), options: .atomic)
+            try imageToStage.write(to: directory.appending(path: imageName), options: .atomic)
             staged.imageRelativePath = "\(SharedConstants.pendingDirectory)/\(value.id.uuidString)/\(imageName)"
         }
 

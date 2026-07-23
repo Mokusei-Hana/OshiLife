@@ -146,6 +146,9 @@ final class LiveEditorViewModel {
             if performersText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 performersText = draft.eventDetails?.performers.joined(separator: " / ") ?? ""
             }
+            if coverImageData == nil {
+                coverImageData = draft.imageData
+            }
             sourceURLString = draft.sourceURL.absoluteString
             importWarning = draft.warning
         } catch {

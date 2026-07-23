@@ -46,7 +46,7 @@ final class PendingImportCoordinator {
 
     func presentManual(_ pending: PendingShareImport) {
         current = pending
-        currentImageData = nil
+        currentImageData = pending.imageData
         do {
             duplicateEvent = try liveStore.event(sourceURLString: pending.sourceURL.absoluteString)
         } catch {

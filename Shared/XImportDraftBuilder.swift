@@ -9,13 +9,19 @@ extension XOEmbedClient: XOEmbedFetching {}
 struct XImportDraftBuilder: Sendable {
     private let client: any XOEmbedFetching
     private let eventLinkImporter: any EventLinkImporting
+    private let fxTwitterClient: any FXTwitterFetching
+    private let imageDownloader: any RemoteImageDataFetching
 
     init(
         client: any XOEmbedFetching = XOEmbedClient(),
-        eventLinkImporter: any EventLinkImporting = EventLinkImporter()
+        eventLinkImporter: any EventLinkImporting = EventLinkImporter(),
+        fxTwitterClient: any FXTwitterFetching = FXTwitterClient(),
+        imageDownloader: any RemoteImageDataFetching = RemoteImageDataClient()
     ) {
         self.client = client
         self.eventLinkImporter = eventLinkImporter
+        self.fxTwitterClient = fxTwitterClient
+        self.imageDownloader = imageDownloader
     }
 
     func makeDraft(from candidate: URL) async throws -> PendingShareImport {
@@ -37,6 +43,29 @@ struct XImportDraftBuilder: Sendable {
             throw CancellationError()
         } catch {
             draft.warning = String(localized: "share.metadata_warning \(error.localizedDescription)")
+        }
+
+        // FxTwitter is only an optional media source. Metadata or image failures
+        // must leave the editable oEmbed draft usable.
+        do {
+            let media = try await fxTwitterClient.fetch(postURL: normalized)
+            for imageURL in media.imageURLs {
+                do {
+                    let data = try await imageDownloader.fetchImage(from: imageURL)
+                    if !data.isEmpty {
+                        draft.imageData = data
+                        break
+                    }
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch {
+                    continue
+                }
+            }
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            // The current import behavior does not depend on media availability.
         }
         return draft
     }
