@@ -65,6 +65,31 @@ final class EventLinkImporterTests: XCTestCase {
         XCTAssertEqual(details.ticketOptions.map(\.price), [9000, 4000, 3500])
     }
 
+    func testParsesAllTicketRowsWithoutTicketSectionHeader() throws {
+        let sourceURL = try XCTUnwrap(URL(string: "https://heroines.jp/news/event-without-ticket-header"))
+        let html = """
+        <div>【公演概要】<br>
+        2026年5月20日(水)<br>
+        「HEROINES LEAGUEⅠ」<br>
+        @ Kanadevia Hall<br>
+        OPEN 13:30 / START 14:30<br>
+        出演：chuLa / TENRIN / iLiFE!<br>
+        Sチケット ￥9,000 (税込) ※スタンディング・前方エリア<br>
+        1Fチケット ¥4,000 (税込) ※スタンディング・後方エリア<br>
+        2Fチケット ￥3,500 (税込) ※2F・自由席</div>
+        """
+
+        let details = try XCTUnwrap(HeroinesEventPageParser().parse(html: html, sourceURL: sourceURL))
+
+        XCTAssertEqual(details.ticketOptions.map(\.name), ["Sチケット", "1Fチケット", "2Fチケット"])
+        XCTAssertEqual(details.ticketOptions.map(\.price), [9000, 4000, 3500])
+        XCTAssertEqual(details.ticketOptions.map(\.description), [
+            "(税込) ※スタンディング・前方エリア",
+            "(税込) ※スタンディング・後方エリア",
+            "(税込) ※2F・自由席"
+        ])
+    }
+
     func testRejectsNonEventHeroinesPageWithoutGuessing() throws {
         let sourceURL = try XCTUnwrap(URL(string: "https://heroines.jp/faq"))
         let html = "<html><body><h1>よくある質問</h1><p>会員登録について</p></body></html>"

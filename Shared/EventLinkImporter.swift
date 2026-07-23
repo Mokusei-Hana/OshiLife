@@ -264,12 +264,20 @@ struct HeroinesEventPageParser: EventPageParsing, Sendable {
 
     private static func ticketOptions(in text: String) -> [TicketOption] {
         let lines = text.components(separatedBy: .newlines)
-        guard let headerIndex = lines.firstIndex(where: {
-            $0.range(of: #"チケット|TICKET"#, options: [.regularExpression, .caseInsensitive]) != nil
-        }) else { return [] }
+        let startIndex: Int
+        if let headerIndex = lines.firstIndex(where: {
+            $0.range(
+                of: #"^(?:▼\s*)?(?:チケット情報|チケット販売|TICKET(?:\s+INFORMATION)?)"#,
+                options: [.regularExpression, .caseInsensitive]
+            ) != nil && ticketOption(from: $0) == nil
+        }) {
+            startIndex = headerIndex + 1
+        } else {
+            startIndex = lines.firstIndex(where: { ticketOption(from: $0) != nil }) ?? lines.count
+        }
 
         var options: [TicketOption] = []
-        for line in lines.dropFirst(headerIndex + 1).prefix(20) {
+        for line in lines.dropFirst(startIndex).prefix(20) {
             if line.range(of: #"^(?:注意|備考|※|▼|【|出演|会場|OPEN|START)"#, options: [.regularExpression, .caseInsensitive]) != nil {
                 if !options.isEmpty { break }
                 continue
