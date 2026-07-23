@@ -5,18 +5,32 @@ struct LiveDetailView: View {
     let imageStore: ImageStore
     let onEdit: () -> Void
     let onDelete: () -> Void
+    let transitionNamespace: Namespace.ID?
+    let transitionID: UUID?
 
     @State private var confirmsDelete = false
     @State private var mapError: String?
 
+    init(
+        event: LiveEvent,
+        imageStore: ImageStore,
+        onEdit: @escaping () -> Void,
+        onDelete: @escaping () -> Void,
+        transitionNamespace: Namespace.ID? = nil,
+        transitionID: UUID? = nil
+    ) {
+        self.event = event
+        self.imageStore = imageStore
+        self.onEdit = onEdit
+        self.onDelete = onDelete
+        self.transitionNamespace = transitionNamespace
+        self.transitionID = transitionID
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                CoverImageView(relativePath: event.coverImagePath, imageStore: imageStore, height: 340)
-                    .clipShape(.rect(cornerRadius: 30))
-                    .overlay(alignment: .topTrailing) {
-                        StatusBadge(status: event.status).padding(16)
-                    }
+                detailCoverImage
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(event.artistName)
@@ -96,6 +110,30 @@ struct LiveDetailView: View {
         } message: {
             Text(mapError ?? "")
         }
+    }
+
+    @ViewBuilder
+    private var detailCoverImage: some View {
+        if let transitionNamespace, let transitionID {
+            coverImage
+                .matchedGeometryEffect(
+                    id: "cover-\(transitionID.uuidString)",
+                    in: transitionNamespace,
+                    properties: .frame,
+                    anchor: .center,
+                    isSource: false
+                )
+        } else {
+            coverImage
+        }
+    }
+
+    private var coverImage: some View {
+        CoverImageView(relativePath: event.coverImagePath, imageStore: imageStore, height: 340)
+            .clipShape(.rect(cornerRadius: 30))
+            .overlay(alignment: .topTrailing) {
+                StatusBadge(status: event.status).padding(16)
+            }
     }
 
     private var infoSection: some View {

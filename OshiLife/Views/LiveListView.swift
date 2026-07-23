@@ -5,40 +5,19 @@ private struct EditorRoute: Identifiable {
     let event: LiveEvent?
 }
 
-private enum EventDisplayMode: String, CaseIterable, Identifiable {
-    case list
-    case card
-
-    var id: String { rawValue }
-
-    var title: LocalizedStringResource {
-        switch self {
-        case .list: "display_mode.list"
-        case .card: "display_mode.card"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .list: "list.bullet"
-        case .card: "rectangle.grid.1x2"
-        }
-    }
-}
-
 struct LiveListView: View {
     @Environment(\.scenePhase) private var scenePhase
     private let liveStore: LiveStore
     private let imageStore: ImageStore
     private let startupWarning: String?
 
-    @AppStorage("eventDisplayMode") private var displayMode = EventDisplayMode.card
     @State private var viewModel: LiveListViewModel
     @State private var importCoordinator: PendingImportCoordinator
     @State private var editorRoute: EditorRoute?
     @State private var showsManualImport = false
     @State private var manualImportDraft: PendingShareImport?
     @State private var path: [UUID] = []
+    @State private var focusedEventID: UUID?
     @Namespace private var cardNamespace
 
     init(
@@ -143,7 +122,7 @@ struct LiveListView: View {
                             .accessibilityIdentifier("addLiveButton")
                     }
                 } else {
-                    eventList(viewModel.filteredEvents, displayMode: displayMode)
+                    homeContent(viewModel.filteredEvents)
                         .refreshable { viewModel.load() }
                 }
             }
@@ -153,7 +132,6 @@ struct LiveListView: View {
                     filterMenu(selection: $viewModel.filter)
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    displayModeMenu
                     Button("manual_import.title", systemImage: "square.and.arrow.down") {
                         showsManualImport = true
                     }
@@ -171,22 +149,6 @@ struct LiveListView: View {
         }
     }
 
-    private var displayModeMenu: some View {
-        Menu {
-            Picker("display_mode.title", selection: $displayMode) {
-                ForEach(EventDisplayMode.allCases) { mode in
-                    Label(mode.title, systemImage: mode.systemImage)
-                        .tag(mode)
-                }
-            }
-        } label: {
-            Image(systemName: displayMode.systemImage)
-        }
-        .accessibilityLabel(Text("display_mode.title"))
-        .accessibilityValue(Text(displayMode.title))
-        .accessibilityIdentifier("displayModeMenu")
-    }
-
     @ViewBuilder
     private func eventDestination(id: UUID, viewModel: LiveListViewModel) -> some View {
         if let event = viewModel.events.first(where: { $0.id == id }) {
@@ -194,7 +156,9 @@ struct LiveListView: View {
                 event: event,
                 imageStore: imageStore,
                 onEdit: { editorRoute = EditorRoute(event: event) },
-                onDelete: { delete(event, id: id, viewModel: viewModel) }
+                onDelete: { delete(event, id: id, viewModel: viewModel) },
+                transitionNamespace: cardNamespace,
+                transitionID: event.id
             )
             .navigationTransition(.zoom(sourceID: id, in: cardNamespace))
         } else {
@@ -221,41 +185,180 @@ struct LiveListView: View {
         }
     }
 
-    private func eventList(
-        _ events: [LiveEvent],
-        displayMode: EventDisplayMode
-    ) -> some View {
-        ScrollView {
-            LazyVStack(spacing: displayMode == .card ? 16 : 10) {
-                ForEach(events) { event in
-                    eventLink(event, displayMode: displayMode)
+    private func homeContent(_ events: [LiveEvent]) -> some View {
+        let scheduled = events.filter { $0.status != .attended }
+        let upcoming = scheduled
+            .filter { $0.eventDate >= .now }
+            .sorted { $0.eventDate < $1.eventDate }
+        let carouselEvents = upcoming.isEmpty
+            ? scheduled.sorted { $0.eventDate > $1.eventDate }
+            : upcoming
+        let history = events
+            .filter { $0.status == .attended }
+            .sorted { $0.eventDate > $1.eventDate }
+
+        return ScrollView {
+            LazyVStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 14) {
+                    sectionTitle("home.upcoming", systemImage: "calendar.badge.clock")
+                    if carouselEvents.isEmpty {
+                        ContentUnavailableView("home.no_upcoming", systemImage: "calendar")
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 180)
+                    } else {
+                        eventCarousel(carouselEvents)
+                    }
+                }
+
+                if let nextEvent = upcoming.first(where: { $0.status == .planned }) {
+                    countdownCard(for: nextEvent)
+                }
+
+                if !history.isEmpty {
+                    VStack(alignment: .leading, spacing: 14) {
+                        sectionTitle("home.attended", systemImage: "checkmark.seal")
+                        historicalEvents(history)
+                    }
                 }
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 14)
+            .padding(.vertical, 18)
         }
-        .animation(.snappy, value: displayMode)
+        .scrollIndicators(.hidden)
+        .animation(.snappy, value: events.map(\.id))
+    }
+
+    private func eventCarousel(_ events: [LiveEvent]) -> some View {
+        GeometryReader { proxy in
+            let cardWidth = min(328, max(280, proxy.size.width - 56))
+            let horizontalMargin = max(28, (proxy.size.width - cardWidth) / 2)
+
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 16) {
+                    ForEach(events) { event in
+                        eventLink(event, cardWidth: cardWidth)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollIndicators(.hidden)
+            .scrollTargetBehavior(.viewAligned)
+            .scrollPosition(id: $focusedEventID, anchor: .center)
+            .contentMargins(.horizontal, horizontalMargin, for: .scrollContent)
+            .onAppear {
+                if focusedEventID == nil || !events.contains(where: { $0.id == focusedEventID }) {
+                    focusedEventID = events.first?.id
+                }
+            }
+            .onChange(of: events.first?.id) { _, firstID in
+                guard focusedEventID == nil || !events.contains(where: { $0.id == focusedEventID }) else { return }
+                focusedEventID = firstID
+            }
+        }
+        .frame(height: 492)
+    }
+
+    private func historicalEvents(_ events: [LiveEvent]) -> some View {
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: 14) {
+                ForEach(events) { event in
+                    eventLink(event, compact: true)
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .frame(height: 196)
+        .scrollIndicators(.hidden)
+        .scrollTargetBehavior(.viewAligned)
+        .contentMargins(.horizontal, 18, for: .scrollContent)
     }
 
     private func eventLink(
         _ event: LiveEvent,
-        displayMode: EventDisplayMode
+        compact: Bool = false,
+        cardWidth: CGFloat = 320
     ) -> some View {
-        NavigationLink(value: event.id) {
-            switch displayMode {
-            case .list:
-                LiveListRowView(event: event)
-            case .card:
-                LiveCardView(event: event, imageStore: imageStore)
+        Button {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) {
+                path.append(event.id)
+            }
+        } label: {
+            if compact {
+                HistoricalEventCard(
+                    event: event,
+                    imageStore: imageStore,
+                    transitionNamespace: cardNamespace
+                )
+            } else {
+                HomeEventCarouselCard(
+                    event: event,
+                    imageStore: imageStore,
+                    transitionNamespace: cardNamespace,
+                    width: cardWidth
+                )
+                .scrollTransition(.interactive, axis: .horizontal) { content, phase in
+                    content
+                        .scaleEffect(phase.isIdentity ? 1 : 0.85)
+                        .opacity(phase.isIdentity ? 1 : 0.62)
+                }
             }
         }
         .buttonStyle(.plain)
+        .zIndex(focusedEventID == event.id ? 1 : 0)
+        .animation(.spring(response: 0.42, dampingFraction: 0.88), value: focusedEventID)
         .matchedTransitionSource(id: event.id, in: cardNamespace)
         .contextMenu {
             Button("common.edit", systemImage: "pencil") {
                 editorRoute = EditorRoute(event: event)
             }
         }
+    }
+
+    private func sectionTitle(
+        _ title: LocalizedStringResource,
+        systemImage: String
+    ) -> some View {
+        Label(title, systemImage: systemImage)
+            .font(.title2.bold())
+            .padding(.horizontal, 18)
+    }
+
+    private func countdownCard(for event: LiveEvent) -> some View {
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            VStack(alignment: .leading, spacing: 10) {
+                Label("home.next_live", systemImage: "timer")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+                HStack(alignment: .lastTextBaseline, spacing: 10) {
+                    Text(countdownText(until: event.eventDate, now: context.date))
+                        .font(.system(size: 38, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                    Text(event.title)
+                        .font(.subheadline.weight(.medium))
+                        .lineLimit(1)
+                }
+                Text(event.eventDate, format: .dateTime.year().month().day().weekday())
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
+            .background(.tint.opacity(0.12), in: .rect(cornerRadius: 22))
+            .overlay {
+                RoundedRectangle(cornerRadius: 22)
+                    .stroke(.tint.opacity(0.25), lineWidth: 1)
+            }
+            .padding(.horizontal, 18)
+        }
+    }
+
+    private func countdownText(until date: Date, now: Date) -> String {
+        let seconds = max(0, Int(date.timeIntervalSince(now)))
+        let days = seconds / 86_400
+        let hours = (seconds % 86_400) / 3_600
+        let minutes = (seconds % 3_600) / 60
+        if days > 0 { return "\(days)d \(hours)h" }
+        if hours > 0 { return "\(hours)h \(minutes)m" }
+        return "\(minutes)m"
     }
 
     private func warningBanner(_ message: String) -> some View {
