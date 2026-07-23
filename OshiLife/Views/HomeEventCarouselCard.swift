@@ -14,7 +14,7 @@ struct HomeEventCarouselCard: View {
                 height: 310
             )
             .matchedGeometryEffect(
-                id: "cover-\(event.id.uuidString)",
+                id: event.id,
                 in: transitionNamespace,
                 properties: .frame,
                 anchor: .center,
@@ -84,7 +84,7 @@ struct HistoricalEventCard: View {
                 height: 122
             )
             .matchedGeometryEffect(
-                id: "cover-\(event.id.uuidString)",
+                id: event.id,
                 in: transitionNamespace,
                 properties: .frame,
                 anchor: .center,

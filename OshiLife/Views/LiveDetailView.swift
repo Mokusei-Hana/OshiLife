@@ -7,6 +7,7 @@ struct LiveDetailView: View {
     let onDelete: () -> Void
     let transitionNamespace: Namespace.ID?
     let transitionID: UUID?
+    private let coverAspectRatio: CGFloat
 
     @State private var confirmsDelete = false
     @State private var showsMapOptions = false
@@ -26,6 +27,12 @@ struct LiveDetailView: View {
         self.onDelete = onDelete
         self.transitionNamespace = transitionNamespace
         self.transitionID = transitionID
+        if let coverImage = imageStore.image(at: event.coverImagePath),
+           coverImage.size.height > 0 {
+            coverAspectRatio = coverImage.size.width / coverImage.size.height
+        } else {
+            coverAspectRatio = 4.0 / 5.0
+        }
     }
 
     var body: some View {
@@ -150,7 +157,7 @@ struct LiveDetailView: View {
         if let transitionNamespace, let transitionID {
             coverImage
                 .matchedGeometryEffect(
-                    id: "cover-\(transitionID.uuidString)",
+                    id: transitionID,
                     in: transitionNamespace,
                     properties: .frame,
                     anchor: .center,
@@ -165,7 +172,7 @@ struct LiveDetailView: View {
         CoverImageView(
             relativePath: event.coverImagePath,
             imageStore: imageStore,
-            aspectRatio: 1
+            aspectRatio: coverAspectRatio
         )
     }
 
