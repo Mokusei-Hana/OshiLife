@@ -14,3 +14,4 @@ build/
 *.xcuserstate
 xcuserdata/
 Config/Local.xcconfig
+TASK_*.md
