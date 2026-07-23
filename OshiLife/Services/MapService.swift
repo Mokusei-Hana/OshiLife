@@ -1,5 +1,4 @@
 import Foundation
-import MapKit
 import UIKit
 
 enum MapProvider: String, CaseIterable, Identifiable {
@@ -10,11 +9,13 @@ enum MapProvider: String, CaseIterable, Identifiable {
 }
 
 enum MapServiceError: LocalizedError, Equatable {
+    case emptyVenue
     case missingCoordinates
     case invalidMapURL
 
     var errorDescription: String? {
         switch self {
+        case .emptyVenue: String(localized: "error.map_empty")
         case .missingCoordinates: String(localized: "error.map_coordinates")
         case .invalidMapURL: String(localized: "error.map_url")
         }
@@ -26,23 +27,47 @@ struct MapService {
     func open(
         provider: MapProvider,
         venue: String,
-        latitude: Double?,
-        longitude: Double?
+        latitude: Double? = nil,
+        longitude: Double? = nil
     ) throws {
-        let coordinate = try Self.coordinate(latitude: latitude, longitude: longitude)
-
-        switch provider {
-        case .apple:
-            let item = MKMapItem(
-                location: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude),
-                address: nil
+        let trimmedVenue = venue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let url: URL
+        if !trimmedVenue.isEmpty {
+            url = switch provider {
+            case .apple: try Self.appleMapsURL(venue: trimmedVenue)
+            case .google: try Self.googleMapsURL(venue: trimmedVenue)
+            }
+        } else {
+            let coordinateQuery = try Self.coordinateQuery(
+                latitude: latitude,
+                longitude: longitude
             )
-            let trimmedVenue = venue.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmedVenue.isEmpty { item.name = trimmedVenue }
-            item.openInMaps()
-        case .google:
-            UIApplication.shared.open(try Self.googleMapsURL(for: coordinate))
+            url = switch provider {
+            case .apple: try Self.appleMapsURL(venue: coordinateQuery)
+            case .google: try Self.googleMapsURL(venue: coordinateQuery)
+            }
         }
+        // Universal map links open an installed app and remain valid browser fallbacks.
+        UIApplication.shared.open(url)
+    }
+
+    static func appleMapsURL(venue: String) throws -> URL {
+        try mapsURL(
+            scheme: "http",
+            host: "maps.apple.com",
+            path: "/",
+            venue: venue
+        )
+    }
+
+    static func googleMapsURL(venue: String) throws -> URL {
+        try mapsURL(
+            scheme: "https",
+            host: "www.google.com",
+            path: "/maps/search/",
+            venue: venue,
+            includesAPIParameter: true
+        )
     }
 
     static func hasValidCoordinates(latitude: Double?, longitude: Double?) -> Bool {
@@ -51,30 +76,43 @@ struct MapService {
     }
 
     static func googleMapsURL(latitude: Double?, longitude: Double?) throws -> URL {
-        try googleMapsURL(for: coordinate(latitude: latitude, longitude: longitude))
+        try googleMapsURL(venue: coordinateQuery(latitude: latitude, longitude: longitude))
     }
 
-    private static func coordinate(
+    private static func coordinateQuery(
         latitude: Double?,
         longitude: Double?
-    ) throws -> CLLocationCoordinate2D {
+    ) throws -> String {
         guard hasValidCoordinates(latitude: latitude, longitude: longitude),
               let latitude,
               let longitude else {
             throw MapServiceError.missingCoordinates
         }
-        return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        return "\(latitude),\(longitude)"
     }
 
-    private static func googleMapsURL(for coordinate: CLLocationCoordinate2D) throws -> URL {
+    private static func mapsURL(
+        scheme: String,
+        host: String,
+        path: String,
+        venue: String,
+        includesAPIParameter: Bool = false
+    ) throws -> URL {
+        let venue = venue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !venue.isEmpty else {
+            throw MapServiceError.emptyVenue
+        }
+
         var components = URLComponents()
-        components.scheme = "https"
-        components.host = "www.google.com"
-        components.path = "/maps/search/"
-        components.queryItems = [
-            URLQueryItem(name: "api", value: "1"),
-            URLQueryItem(name: "query", value: "\(coordinate.latitude),\(coordinate.longitude)")
-        ]
+        components.scheme = scheme
+        components.host = host
+        components.path = path
+        components.queryItems = includesAPIParameter
+            ? [
+                URLQueryItem(name: "api", value: "1"),
+                URLQueryItem(name: "query", value: venue)
+            ]
+            : [URLQueryItem(name: "q", value: venue)]
         guard let url = components.url else { throw MapServiceError.invalidMapURL }
         return url
     }

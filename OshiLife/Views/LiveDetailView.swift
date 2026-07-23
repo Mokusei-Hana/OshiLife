@@ -9,6 +9,7 @@ struct LiveDetailView: View {
     let transitionID: UUID?
 
     @State private var confirmsDelete = false
+    @State private var showsMapOptions = false
     @State private var mapError: String?
 
     init(
@@ -31,11 +32,15 @@ struct LiveDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 detailCoverImage
+                    .frame(maxWidth: 520)
+                    .frame(maxWidth: .infinity, alignment: .center)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(event.artistName)
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
+                    if !event.artistName.isEmpty {
+                        Text(event.artistName)
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                    }
                     Text(event.title)
                         .font(.largeTitle.bold())
                         .textSelection(.enabled)
@@ -102,6 +107,23 @@ struct LiveDetailView: View {
         } message: {
             Text("delete.message")
         }
+        .confirmationDialog(
+            "detail.open_maps",
+            isPresented: $showsMapOptions,
+            titleVisibility: .visible
+        ) {
+            Button {
+                openMap(with: .apple)
+            } label: {
+                Label("map.apple", systemImage: "apple.logo")
+            }
+            Button {
+                openMap(with: .google)
+            } label: {
+                Label("map.google", systemImage: "globe")
+            }
+            Button("common.cancel", role: .cancel) {}
+        }
         .alert("common.error", isPresented: Binding(
             get: { mapError != nil },
             set: { if !$0 { mapError = nil } }
@@ -114,6 +136,17 @@ struct LiveDetailView: View {
 
     @ViewBuilder
     private var detailCoverImage: some View {
+        matchedCoverImage
+            .clipShape(.rect(cornerRadius: 24))
+            .overlay(alignment: .topTrailing) {
+                StatusBadge(status: event.status)
+                    .padding(16)
+            }
+            .shadow(color: .black.opacity(0.16), radius: 18, y: 10)
+    }
+
+    @ViewBuilder
+    private var matchedCoverImage: some View {
         if let transitionNamespace, let transitionID {
             coverImage
                 .matchedGeometryEffect(
@@ -129,11 +162,11 @@ struct LiveDetailView: View {
     }
 
     private var coverImage: some View {
-        CoverImageView(relativePath: event.coverImagePath, imageStore: imageStore, height: 340)
-            .clipShape(.rect(cornerRadius: 30))
-            .overlay(alignment: .topTrailing) {
-                StatusBadge(status: event.status).padding(16)
-            }
+        CoverImageView(
+            relativePath: event.coverImagePath,
+            imageStore: imageStore,
+            aspectRatio: 1
+        )
     }
 
     private var infoSection: some View {
@@ -169,36 +202,38 @@ struct LiveDetailView: View {
                     Image(systemName: "calendar")
                 }
 
-                if !event.venue.isEmpty || !event.address.isEmpty || hasMapCoordinates {
-                    Label {
-                        VStack(alignment: .leading) {
-                            if !event.venue.isEmpty { Text(event.venue) }
-                            if !event.address.isEmpty {
-                                Text(event.address).foregroundStyle(.secondary)
-                            }
-                        }
-                    } icon: {
-                        Image(systemName: "mappin.and.ellipse")
-                    }
+                if !mapQuery.isEmpty {
+                    Button {
+                        showsMapOptions = true
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "mappin.and.ellipse")
+                                .frame(width: 20)
 
-                    if hasMapCoordinates {
-                        Menu {
-                            Button {
-                                openMap(with: .apple)
-                            } label: {
-                                Label("map.apple", systemImage: "apple.logo")
+                            VStack(alignment: .leading, spacing: 2) {
+                                if !event.venue.isEmpty {
+                                    Text(event.venue)
+                                        .foregroundStyle(.primary)
+                                }
+                                if !event.address.isEmpty {
+                                    Text(event.address)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
-                            Button {
-                                openMap(with: .google)
-                            } label: {
-                                Label("map.google", systemImage: "globe")
-                            }
-                        } label: {
-                            Label("detail.open_maps", systemImage: "map")
-                                .frame(maxWidth: .infinity)
+
+                            Spacer(minLength: 8)
+
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.tertiary)
                         }
-                        .buttonStyle(.glass)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        .contentShape(.rect)
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(Text("detail.open_maps"))
+                    .accessibilityIdentifier("venueMapButton")
                 }
             }
         }
@@ -290,8 +325,10 @@ struct LiveDetailView: View {
         .background(.regularMaterial, in: .rect(cornerRadius: 22))
     }
 
-    private var hasMapCoordinates: Bool {
-        MapService.hasValidCoordinates(latitude: event.latitude, longitude: event.longitude)
+    private var mapQuery: String {
+        let venue = event.venue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !venue.isEmpty { return venue }
+        return event.address.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     @MainActor
@@ -299,9 +336,7 @@ struct LiveDetailView: View {
         do {
             try MapService().open(
                 provider: provider,
-                venue: event.venue,
-                latitude: event.latitude,
-                longitude: event.longitude
+                venue: mapQuery
             )
         } catch {
             mapError = error.localizedDescription

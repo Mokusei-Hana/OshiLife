@@ -160,7 +160,6 @@ struct LiveListView: View {
                 transitionNamespace: cardNamespace,
                 transitionID: event.id
             )
-            .navigationTransition(.zoom(sourceID: id, in: cardNamespace))
         } else {
             ContentUnavailableView("error.missing_live", systemImage: "exclamationmark.triangle")
         }
@@ -305,7 +304,6 @@ struct LiveListView: View {
         .buttonStyle(.plain)
         .zIndex(focusedEventID == event.id ? 1 : 0)
         .animation(.spring(response: 0.42, dampingFraction: 0.88), value: focusedEventID)
-        .matchedTransitionSource(id: event.id, in: cardNamespace)
         .contextMenu {
             Button("common.edit", systemImage: "pencil") {
                 editorRoute = EditorRoute(event: event)
