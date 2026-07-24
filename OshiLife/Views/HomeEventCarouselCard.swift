@@ -46,7 +46,9 @@ struct HomeEventCarouselCard: View {
                         .lineLimit(1)
                 }
             }
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
             .frame(maxWidth: .infinity, minHeight: 154, alignment: .topLeading)
         }
         .frame(width: width)

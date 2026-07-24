@@ -300,7 +300,6 @@ struct LiveListView: View {
             .opacity(events.count > 1 && showsCarouselPageIndicator ? 1 : 0)
             .accessibilityHidden(!showsCarouselPageIndicator)
         }
-        .padding(.horizontal, 18)
     }
 
     private func eventCarousel(_ events: [LiveEvent], now: Date) -> some View {
