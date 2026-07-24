@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 private struct EditorRoute: Identifiable {
     let id = UUID()
@@ -40,6 +41,8 @@ struct LiveListView: View {
     @State private var manualImportDraft: PendingShareImport?
     @State private var path: [UUID] = []
     @State private var focusedEventID: UUID?
+    @State private var showsCarouselPageIndicator = false
+    @State private var carouselIndicatorDismissTask: Task<Void, Never>?
 
     init(
         liveStore: LiveStore,
@@ -261,7 +264,7 @@ struct LiveListView: View {
 
         return ScrollView {
             LazyVStack(alignment: .leading, spacing: 28) {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 16) {
                     sectionTitle("home.upcoming", systemImage: "calendar.badge.clock")
                     if upcoming.isEmpty {
                         ContentUnavailableView("home.no_upcoming", systemImage: "calendar")
@@ -289,8 +292,13 @@ struct LiveListView: View {
         VStack(spacing: 0) {
             eventCarousel(events)
 
-            Divider()
-                .padding(.horizontal, 18)
+            CarouselPageIndicator(
+                numberOfPages: events.count,
+                currentPage: focusedEventIndex(in: events)
+            )
+            .frame(height: 28)
+            .opacity(events.count > 1 && showsCarouselPageIndicator ? 1 : 0)
+            .accessibilityHidden(!showsCarouselPageIndicator)
 
             countdownCard(
                 for: focusedEvent(in: events),
@@ -301,9 +309,9 @@ struct LiveListView: View {
         .clipShape(.rect(cornerRadius: 24))
         .overlay {
             RoundedRectangle(cornerRadius: 24)
-                .stroke(.white.opacity(0.14), lineWidth: 1)
+                .stroke(.primary.opacity(0.08), lineWidth: 1)
         }
-        .shadow(color: .black.opacity(0.16), radius: 16, y: 10)
+        .shadow(color: .black.opacity(0.10), radius: 14, y: 6)
         .padding(.horizontal, 18)
     }
 
@@ -336,11 +344,19 @@ struct LiveListView: View {
             .scrollTargetBehavior(.viewAligned)
             .scrollPosition(id: $focusedEventID, anchor: .center)
             .contentMargins(.horizontal, horizontalMargin, for: .scrollContent)
+            .onScrollPhaseChange { _, newPhase in
+                updateCarouselIndicator(for: newPhase)
+            }
             .onAppear {
                 synchronizeFocus(with: events)
             }
             .onChange(of: events.map(\.id)) { _, _ in
                 synchronizeFocus(with: events)
+            }
+            .onDisappear {
+                carouselIndicatorDismissTask?.cancel()
+                carouselIndicatorDismissTask = nil
+                showsCarouselPageIndicator = false
             }
         }
         .frame(height: 464)
@@ -388,11 +404,40 @@ struct LiveListView: View {
         return events.first { $0.id == focusedEventID } ?? events.first
     }
 
+    private func focusedEventIndex(in events: [LiveEvent]) -> Int {
+        guard let focusedEventID else { return 0 }
+        return events.firstIndex { $0.id == focusedEventID } ?? 0
+    }
+
     private func synchronizeFocus(with events: [LiveEvent]) {
         guard focusedEventID == nil || !events.contains(where: { $0.id == focusedEventID }) else {
             return
         }
         focusedEventID = events.first?.id
+    }
+
+    private func updateCarouselIndicator(for phase: ScrollPhase) {
+        carouselIndicatorDismissTask?.cancel()
+
+        switch phase {
+        case .tracking, .interacting, .decelerating:
+            withAnimation(.easeOut(duration: 0.16)) {
+                showsCarouselPageIndicator = true
+            }
+        case .idle:
+            guard showsCarouselPageIndicator else { return }
+            carouselIndicatorDismissTask = Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(700))
+                guard !Task.isCancelled else { return }
+                withAnimation(.easeOut(duration: 0.22)) {
+                    showsCarouselPageIndicator = false
+                }
+            }
+        case .animating:
+            break
+        @unknown default:
+            break
+        }
     }
 
     private func sectionTitle(
@@ -411,7 +456,7 @@ struct LiveListView: View {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Label("home.selected_live_countdown", systemImage: "timer")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.tint)
 
                     Spacer(minLength: 8)
 
@@ -421,7 +466,8 @@ struct LiveListView: View {
                 }
 
                 Text(countdownText(until: event.eventDate, now: now))
-                    .font(.system(size: 38, weight: .bold, design: .rounded))
+                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .foregroundStyle(.tint)
                     .monospacedDigit()
 
                 Text(event.title)
@@ -429,7 +475,14 @@ struct LiveListView: View {
                     .lineLimit(2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(18)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .background(.tint.opacity(0.10))
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(.tint.opacity(0.18))
+                    .frame(height: 1)
+            }
         }
     }
 
@@ -450,5 +503,27 @@ struct LiveListView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
             .glassEffect(.regular.tint(.orange.opacity(0.12)), in: .rect(cornerRadius: 16))
+    }
+}
+
+private struct CarouselPageIndicator: UIViewRepresentable {
+    let numberOfPages: Int
+    let currentPage: Int
+
+    func makeUIView(context: Context) -> UIPageControl {
+        let pageControl = UIPageControl()
+        pageControl.backgroundStyle = .minimal
+        pageControl.hidesForSinglePage = true
+        pageControl.allowsContinuousInteraction = false
+        pageControl.isUserInteractionEnabled = false
+        pageControl.isAccessibilityElement = false
+        pageControl.currentPageIndicatorTintColor = .label.withAlphaComponent(0.72)
+        pageControl.pageIndicatorTintColor = .secondaryLabel.withAlphaComponent(0.28)
+        return pageControl
+    }
+
+    func updateUIView(_ pageControl: UIPageControl, context: Context) {
+        pageControl.numberOfPages = numberOfPages
+        pageControl.currentPage = currentPage
     }
 }
