@@ -290,7 +290,7 @@ struct LiveListView: View {
 
     private func upcomingHero(events: [LiveEvent], now: Date) -> some View {
         VStack(spacing: 0) {
-            eventCarousel(events)
+            eventCarousel(events, now: now)
 
             CarouselPageIndicator(
                 numberOfPages: events.count,
@@ -299,23 +299,11 @@ struct LiveListView: View {
             .frame(height: 28)
             .opacity(events.count > 1 && showsCarouselPageIndicator ? 1 : 0)
             .accessibilityHidden(!showsCarouselPageIndicator)
-
-            countdownCard(
-                for: focusedEvent(in: events),
-                now: now
-            )
         }
-        .background(.regularMaterial)
-        .clipShape(.rect(cornerRadius: 24))
-        .overlay {
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(.primary.opacity(0.08), lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.10), radius: 14, y: 6)
         .padding(.horizontal, 18)
     }
 
-    private func eventCarousel(_ events: [LiveEvent]) -> some View {
+    private func eventCarousel(_ events: [LiveEvent], now: Date) -> some View {
         GeometryReader { proxy in
             let cardWidth = min(328, max(280, proxy.size.width - 56))
             let horizontalMargin = max(28, (proxy.size.width - cardWidth) / 2)
@@ -324,11 +312,7 @@ struct LiveListView: View {
                 LazyHStack(spacing: 16) {
                     ForEach(events) { event in
                         eventLink(event) {
-                            HomeEventCarouselCard(
-                                event: event,
-                                imageStore: imageStore,
-                                width: cardWidth
-                            )
+                            eventHeroCard(event, now: now, width: cardWidth)
                             .scrollTransition(.interactive, axis: .horizontal) { content, phase in
                                 content
                                     .scaleEffect(phase.isIdentity ? 1 : 0.85)
@@ -340,6 +324,7 @@ struct LiveListView: View {
                 }
                 .scrollTargetLayout()
             }
+            .scrollClipDisabled()
             .scrollIndicators(.hidden)
             .scrollTargetBehavior(.viewAligned)
             .scrollPosition(id: $focusedEventID, anchor: .center)
@@ -359,7 +344,28 @@ struct LiveListView: View {
                 showsCarouselPageIndicator = false
             }
         }
-        .frame(height: 464)
+        .frame(height: 640)
+    }
+
+    private func eventHeroCard(_ event: LiveEvent, now: Date, width: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            HomeEventCarouselCard(
+                event: event,
+                imageStore: imageStore,
+                width: width
+            )
+
+            countdownCard(for: event, now: now)
+        }
+        .frame(width: width)
+        .background(.regularMaterial)
+        .clipShape(.rect(cornerRadius: 24))
+        .overlay {
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(.primary.opacity(0.08), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.10), radius: 14, y: 6)
+        .contentShape(.rect(cornerRadius: 24))
     }
 
     private func historicalEvents(_ events: [LiveEvent]) -> some View {
@@ -397,11 +403,6 @@ struct LiveListView: View {
                 editorRoute = EditorRoute(event: event)
             }
         }
-    }
-
-    private func focusedEvent(in events: [LiveEvent]) -> LiveEvent? {
-        guard let focusedEventID else { return events.first }
-        return events.first { $0.id == focusedEventID } ?? events.first
     }
 
     private func focusedEventIndex(in events: [LiveEvent]) -> Int {
