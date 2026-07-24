@@ -5,10 +5,16 @@ struct LiveListRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(event.title)
-                .font(.headline)
-                .foregroundStyle(.primary)
-                .lineLimit(2)
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(event.title)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+
+                Spacer(minLength: 8)
+
+                StatusBadge(status: event.status)
+            }
 
             HStack(spacing: 14) {
                 Label {

@@ -5,53 +5,15 @@ struct LiveDetailView: View {
     let imageStore: ImageStore
     let onEdit: () -> Void
     let onDelete: () -> Void
-    let transitionNamespace: Namespace.ID?
-    let transitionID: UUID?
-    private let coverAspectRatio: CGFloat
 
     @State private var confirmsDelete = false
     @State private var showsMapOptions = false
     @State private var mapError: String?
 
-    init(
-        event: LiveEvent,
-        imageStore: ImageStore,
-        onEdit: @escaping () -> Void,
-        onDelete: @escaping () -> Void,
-        transitionNamespace: Namespace.ID? = nil,
-        transitionID: UUID? = nil
-    ) {
-        self.event = event
-        self.imageStore = imageStore
-        self.onEdit = onEdit
-        self.onDelete = onDelete
-        self.transitionNamespace = transitionNamespace
-        self.transitionID = transitionID
-        if let coverImage = imageStore.image(at: event.coverImagePath),
-           coverImage.size.height > 0 {
-            coverAspectRatio = coverImage.size.width / coverImage.size.height
-        } else {
-            coverAspectRatio = 4.0 / 5.0
-        }
-    }
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                detailCoverImage
-                    .frame(maxWidth: 520)
-                    .frame(maxWidth: .infinity, alignment: .center)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    if !event.artistName.isEmpty {
-                        Text(event.artistName)
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
-                    }
-                    Text(event.title)
-                        .font(.largeTitle.bold())
-                        .textSelection(.enabled)
-                }
+                eventHeader
 
                 infoSection
 
@@ -141,39 +103,34 @@ struct LiveDetailView: View {
         }
     }
 
-    @ViewBuilder
-    private var detailCoverImage: some View {
-        matchedCoverImage
+    private var eventHeader: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            CoverImageView(
+                relativePath: event.coverImagePath,
+                imageStore: imageStore,
+                aspectRatio: 4.0 / 5.0
+            )
             .clipShape(.rect(cornerRadius: 24))
             .overlay(alignment: .topTrailing) {
                 StatusBadge(status: event.status)
                     .padding(16)
             }
             .shadow(color: .black.opacity(0.16), radius: 18, y: 10)
-    }
+            .frame(maxWidth: 520)
+            .frame(maxWidth: .infinity, alignment: .center)
 
-    @ViewBuilder
-    private var matchedCoverImage: some View {
-        if let transitionNamespace, let transitionID {
-            coverImage
-                .matchedGeometryEffect(
-                    id: transitionID,
-                    in: transitionNamespace,
-                    properties: .frame,
-                    anchor: .center,
-                    isSource: false
-                )
-        } else {
-            coverImage
+            VStack(alignment: .leading, spacing: 8) {
+                if !event.artistName.isEmpty {
+                    Text(event.artistName)
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                }
+                Text(event.title)
+                    .font(.largeTitle.bold())
+                    .textSelection(.enabled)
+            }
         }
-    }
-
-    private var coverImage: some View {
-        CoverImageView(
-            relativePath: event.coverImagePath,
-            imageStore: imageStore,
-            aspectRatio: coverAspectRatio
-        )
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var infoSection: some View {

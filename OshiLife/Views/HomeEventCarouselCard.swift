@@ -3,7 +3,6 @@ import SwiftUI
 struct HomeEventCarouselCard: View {
     let event: LiveEvent
     let imageStore: ImageStore
-    let transitionNamespace: Namespace.ID
     let width: CGFloat
 
     var body: some View {
@@ -12,13 +11,6 @@ struct HomeEventCarouselCard: View {
                 relativePath: event.coverImagePath,
                 imageStore: imageStore,
                 height: 310
-            )
-            .matchedGeometryEffect(
-                id: event.id,
-                in: transitionNamespace,
-                properties: .frame,
-                anchor: .center,
-                isSource: true
             )
             .overlay(alignment: .topTrailing) {
                 StatusBadge(status: event.status)
@@ -74,7 +66,6 @@ struct HomeEventCarouselCard: View {
 struct HistoricalEventCard: View {
     let event: LiveEvent
     let imageStore: ImageStore
-    let transitionNamespace: Namespace.ID
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -82,13 +73,6 @@ struct HistoricalEventCard: View {
                 relativePath: event.coverImagePath,
                 imageStore: imageStore,
                 height: 122
-            )
-            .matchedGeometryEffect(
-                id: event.id,
-                in: transitionNamespace,
-                properties: .frame,
-                anchor: .center,
-                isSource: true
             )
 
             VStack(alignment: .leading, spacing: 5) {
