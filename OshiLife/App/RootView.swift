@@ -6,11 +6,13 @@ struct RootView: View {
     private let imageStore: ImageStore
     private let pendingStore: PendingImportStore?
     private let startupWarning: String?
+    @State private var settings: AppSettings
 
     init(container: ModelContainer, startupWarning: String?) {
         let liveStore = LiveStore(container: container)
         self.liveStore = liveStore
         self.startupWarning = startupWarning
+        _settings = State(initialValue: AppSettings())
 
         if let sharedURL = try? FileManager.default.oshiLifeSharedContainerURL() {
             imageStore = ImageStore(rootURL: sharedURL)
@@ -30,5 +32,7 @@ struct RootView: View {
             pendingStore: pendingStore,
             startupWarning: startupWarning
         )
+        .environment(settings)
+        .preferredColorScheme(settings.appearance.colorScheme)
     }
 }

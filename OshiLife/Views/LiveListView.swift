@@ -29,6 +29,7 @@ private enum EventDisplayMode: String, CaseIterable, Identifiable {
 
 struct LiveListView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(AppSettings.self) private var settings
     private let liveStore: LiveStore
     private let imageStore: ImageStore
     private let startupWarning: String?
@@ -156,6 +157,12 @@ struct LiveListView: View {
                     filterMenu(selection: $viewModel.filter)
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    NavigationLink {
+                        SettingsView(settings: settings)
+                    } label: {
+                        Label("settings.title", systemImage: "gearshape")
+                    }
+                    .accessibilityIdentifier("settingsButton")
                     displayModeMenu
                     Button("manual_import.title", systemImage: "square.and.arrow.down") {
                         showsManualImport = true

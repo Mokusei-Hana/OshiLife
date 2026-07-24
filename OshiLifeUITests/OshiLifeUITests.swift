@@ -16,4 +16,16 @@ final class OshiLifeUITests: XCTestCase {
         addButton.tap()
         XCTAssertTrue(app.navigationBars["新しいライブ"].waitForExistence(timeout: 3))
     }
+
+    func testOpensSettings() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-AppleLanguages", "(ja)"]
+        app.launch()
+
+        let settingsButton = app.buttons["settingsButton"].firstMatch
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
+        settingsButton.tap()
+
+        XCTAssertTrue(app.navigationBars["設定"].waitForExistence(timeout: 3))
+    }
 }
