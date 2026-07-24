@@ -76,23 +76,6 @@ struct LiveDetailView: View {
         } message: {
             Text("delete.message")
         }
-        .confirmationDialog(
-            "detail.open_maps",
-            isPresented: $showsMapOptions,
-            titleVisibility: .visible
-        ) {
-            Button {
-                openMap(with: .apple)
-            } label: {
-                Label("map.apple", systemImage: "apple.logo")
-            }
-            Button {
-                openMap(with: .google)
-            } label: {
-                Label("map.google", systemImage: "globe")
-            }
-            Button("common.cancel", role: .cancel) {}
-        }
         .alert("common.error", isPresented: Binding(
             get: { mapError != nil },
             set: { if !$0 { mapError = nil } }
@@ -198,6 +181,23 @@ struct LiveDetailView: View {
                     .buttonStyle(.plain)
                     .accessibilityHint(Text("detail.open_maps"))
                     .accessibilityIdentifier("venueMapButton")
+                    .confirmationDialog(
+                        "detail.open_maps",
+                        isPresented: $showsMapOptions,
+                        titleVisibility: .visible
+                    ) {
+                        Button {
+                            openMap(with: .apple)
+                        } label: {
+                            Label("map.apple", systemImage: "apple.logo")
+                        }
+                        Button {
+                            openMap(with: .google)
+                        } label: {
+                            Label("map.google", systemImage: "globe")
+                        }
+                        Button("common.cancel", role: .cancel) {}
+                    }
                 }
             }
         }

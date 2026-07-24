@@ -268,11 +268,7 @@ struct LiveListView: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: 180)
                     } else {
-                        eventCarousel(upcoming)
-                        countdownCard(
-                            for: focusedEvent(in: upcoming),
-                            now: now
-                        )
+                        upcomingHero(events: upcoming, now: now)
                     }
                 }
 
@@ -287,6 +283,28 @@ struct LiveListView: View {
         }
         .scrollIndicators(.hidden)
         .animation(.snappy, value: events.map(\.id))
+    }
+
+    private func upcomingHero(events: [LiveEvent], now: Date) -> some View {
+        VStack(spacing: 0) {
+            eventCarousel(events)
+
+            Divider()
+                .padding(.horizontal, 18)
+
+            countdownCard(
+                for: focusedEvent(in: events),
+                now: now
+            )
+        }
+        .background(.regularMaterial)
+        .clipShape(.rect(cornerRadius: 24))
+        .overlay {
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(.white.opacity(0.14), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.16), radius: 16, y: 10)
+        .padding(.horizontal, 18)
     }
 
     private func eventCarousel(_ events: [LiveEvent]) -> some View {
@@ -325,7 +343,7 @@ struct LiveListView: View {
                 synchronizeFocus(with: events)
             }
         }
-        .frame(height: 480)
+        .frame(height: 464)
     }
 
     private func historicalEvents(_ events: [LiveEvent]) -> some View {
@@ -412,12 +430,6 @@ struct LiveListView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(18)
-            .background(.tint.opacity(0.12), in: .rect(cornerRadius: 22))
-            .overlay {
-                RoundedRectangle(cornerRadius: 22)
-                    .stroke(.tint.opacity(0.25), lineWidth: 1)
-            }
-            .padding(.horizontal, 18)
         }
     }
 

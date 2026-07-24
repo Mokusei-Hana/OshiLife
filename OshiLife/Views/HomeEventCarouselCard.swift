@@ -12,6 +12,7 @@ struct HomeEventCarouselCard: View {
                 imageStore: imageStore,
                 height: 310
             )
+            .clipShape(.rect(cornerRadius: 24))
             .overlay(alignment: .topTrailing) {
                 StatusBadge(status: event.status)
                     .padding(14)
@@ -49,14 +50,7 @@ struct HomeEventCarouselCard: View {
             .frame(maxWidth: .infinity, minHeight: 154, alignment: .topLeading)
         }
         .frame(width: width)
-        .background(.regularMaterial)
-        .clipShape(.rect(cornerRadius: 24))
-        .overlay {
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(.white.opacity(0.14), lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.16), radius: 16, y: 10)
-        .contentShape(.rect(cornerRadius: 24))
+        .contentShape(.rect)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text("card.accessibility \(event.artistName) \(event.title)"))
         .accessibilityIdentifier("eventCard")
