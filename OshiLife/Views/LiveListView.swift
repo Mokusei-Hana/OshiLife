@@ -304,8 +304,8 @@ struct LiveListView: View {
 
     private func eventCarousel(_ events: [LiveEvent], now: Date) -> some View {
         GeometryReader { proxy in
-            let cardWidth = min(328, max(280, proxy.size.width - 56))
-            let horizontalMargin = max(28, (proxy.size.width - cardWidth) / 2)
+            let cardWidth = min(360, max(288, proxy.size.width - 32))
+            let horizontalMargin = max(16, (proxy.size.width - cardWidth) / 2)
 
             ScrollView(.horizontal) {
                 LazyHStack(spacing: 16) {
