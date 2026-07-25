@@ -179,6 +179,12 @@ extension OshiLifeSchemaV3 {
         var ticketURL: URL? { Self.validHTTPURL(ticketURLString) }
         var sourceURL: URL? { Self.validHTTPURL(sourceURLString) }
 
+        var ticketActionURL: URL? {
+            guard let ticketURL else { return nil }
+            guard selectedTicketID != nil else { return ticketURL }
+            return TicketPlatform.detect(from: ticketURL)?.ticketAccessURL ?? ticketURL
+        }
+
         static func validHTTPURL(_ rawValue: String) -> URL? {
             let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
             guard let url = URL(string: trimmed),

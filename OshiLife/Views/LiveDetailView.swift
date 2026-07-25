@@ -37,7 +37,7 @@ struct LiveDetailView: View {
                     }
                 }
 
-                if !event.ticketOptions.isEmpty {
+                if !event.ticketOptions.isEmpty || event.ticketURL != nil {
                     ticketSection
                 }
 
@@ -49,17 +49,10 @@ struct LiveDetailView: View {
                     }
                 }
 
-                if event.ticketURL != nil || event.sourceURL != nil {
+                if event.sourceURL != nil {
                     detailSection("detail.links") {
                         GlassEffectContainer(spacing: 12) {
                             VStack(spacing: 12) {
-                                if let ticketURL = event.ticketURL {
-                                    Link(destination: ticketURL) {
-                                        Label("detail.ticket", systemImage: "ticket")
-                                            .frame(maxWidth: .infinity)
-                                    }
-                                    .buttonStyle(.glassProminent)
-                                }
                                 if let sourceURL = event.sourceURL {
                                     Link(destination: sourceURL) {
                                         Label("detail.source", systemImage: "link")
@@ -225,15 +218,29 @@ struct LiveDetailView: View {
     private var ticketSection: some View {
         detailSection("editor.tickets") {
             VStack(alignment: .leading, spacing: 12) {
-                Text("detail.available_tickets")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
                 ForEach(Array(event.ticketOptions.enumerated()), id: \.element.id) { index, option in
                     ticketRow(option, isSelected: option.id == event.selectedTicketID)
                     if index < event.ticketOptions.count - 1 {
                         Divider()
                     }
+                }
+
+                if !event.ticketOptions.isEmpty, event.ticketActionURL != nil {
+                    Divider()
+                }
+
+                if let actionURL = event.ticketActionURL {
+                    Link(destination: actionURL) {
+                        if event.selectedTicketID == nil {
+                            Label("ticket.purchase", systemImage: "cart")
+                                .frame(maxWidth: .infinity)
+                        } else {
+                            Label("ticket.open_purchased", systemImage: "ticket.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .buttonStyle(.glassProminent)
+                    .accessibilityIdentifier("ticketActionButton")
                 }
             }
         }

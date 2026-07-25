@@ -140,6 +140,8 @@
     "status.cancelled" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "中止" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已取消" } } } },
     "status.planned" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "参戦予定" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "计划参加" } } } },
     "ticket.none" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "未選択" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "未选择" } } } },
+    "ticket.open_purchased" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "購入したチケットを開く" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开已购票" } } } },
+    "ticket.purchase" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "チケットを購入" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "购买门票" } } } },
     "ticket.selected" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "購入済み" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已购买" } } } },
     "validation.artist_required" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "アーティスト・グループを入力してください。" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请输入艺人或团体。" } } } },
     "validation.date_required" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "開催日を選んでください。" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请选择演出日期。" } } } },
