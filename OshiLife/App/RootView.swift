@@ -33,6 +33,7 @@ struct RootView: View {
             startupWarning: startupWarning
         )
         .environment(settings)
+        .tint(ThemeSystem.appAccentColor(for: settings))
         .preferredColorScheme(settings.appearance.colorScheme)
     }
 }

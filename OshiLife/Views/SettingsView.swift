@@ -28,6 +28,17 @@ struct SettingsView: View {
                     }
                 }
 
+                if settings.accentColorMode == .custom {
+                    ColorPicker(
+                        "settings.accent.custom_color",
+                        selection: Binding(
+                            get: { settings.customAccentColor.color },
+                            set: { settings.customAccentColor = AccentColorValue(color: $0) }
+                        ),
+                        supportsOpacity: false
+                    )
+                }
+
                 Picker("settings.app_appearance", selection: $settings.appearance) {
                     ForEach(AppAppearance.allCases) { appearance in
                         Text(appearance.title).tag(appearance)

@@ -45,6 +45,7 @@ final class AppSettings {
     private enum Key {
         static let accentColorMode = "settings.accentColorMode"
         static let appearance = "settings.appearance"
+        static let customAccentColor = "settings.customAccentColor"
         static let homeDisplayStyle = "settings.homeDisplayStyle"
         static let language = "settings.language"
         static let legacyHomeDisplayStyle = "eventDisplayMode"
@@ -58,6 +59,14 @@ final class AppSettings {
 
     var appearance: AppAppearance {
         didSet { defaults.set(appearance.rawValue, forKey: Key.appearance) }
+    }
+
+    var customAccentColor: AccentColorValue {
+        didSet {
+            if let data = try? JSONEncoder().encode(customAccentColor) {
+                defaults.set(data, forKey: Key.customAccentColor)
+            }
+        }
     }
 
     var homeDisplayStyle: HomeDisplayStyle {
@@ -76,6 +85,9 @@ final class AppSettings {
         appearance = AppAppearance(
             rawValue: defaults.string(forKey: Key.appearance) ?? ""
         ) ?? .system
+        customAccentColor = defaults.data(forKey: Key.customAccentColor)
+            .flatMap { try? JSONDecoder().decode(AccentColorValue.self, from: $0) }
+            ?? .oshiLifeDefault
         homeDisplayStyle = HomeDisplayStyle(
             rawValue: defaults.string(forKey: Key.homeDisplayStyle)
                 ?? defaults.string(forKey: Key.legacyHomeDisplayStyle)

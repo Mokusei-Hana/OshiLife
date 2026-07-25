@@ -25,6 +25,7 @@ final class AppSettingsTests: XCTestCase {
 
         XCTAssertEqual(settings.accentColorMode, .oshiLifeDefault)
         XCTAssertEqual(settings.appearance, .system)
+        XCTAssertEqual(settings.customAccentColor, .oshiLifeDefault)
         XCTAssertEqual(settings.homeDisplayStyle, .card)
         XCTAssertEqual(settings.language, .system)
     }
@@ -33,6 +34,7 @@ final class AppSettingsTests: XCTestCase {
         let settings = AppSettings(defaults: defaults)
         settings.accentColorMode = .artworkColor
         settings.appearance = .dark
+        settings.customAccentColor = AccentColorValue(red: 0.1, green: 0.2, blue: 0.3)
         settings.homeDisplayStyle = .list
         settings.language = .simplifiedChinese
 
@@ -40,6 +42,10 @@ final class AppSettingsTests: XCTestCase {
 
         XCTAssertEqual(reloaded.accentColorMode, .artworkColor)
         XCTAssertEqual(reloaded.appearance, .dark)
+        XCTAssertEqual(
+            reloaded.customAccentColor,
+            AccentColorValue(red: 0.1, green: 0.2, blue: 0.3)
+        )
         XCTAssertEqual(reloaded.homeDisplayStyle, .list)
         XCTAssertEqual(reloaded.language, .simplifiedChinese)
     }

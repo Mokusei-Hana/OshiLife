@@ -6,9 +6,26 @@ struct LiveDetailView: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
 
+    @Environment(AppSettings.self) private var settings
     @State private var confirmsDelete = false
     @State private var showsMapOptions = false
     @State private var mapError: String?
+    private let artworkAccentColor: AccentColorValue
+
+    init(
+        event: LiveEvent,
+        imageStore: ImageStore,
+        onEdit: @escaping () -> Void,
+        onDelete: @escaping () -> Void
+    ) {
+        self.event = event
+        self.imageStore = imageStore
+        self.onEdit = onEdit
+        self.onDelete = onDelete
+        artworkAccentColor = ArtworkAccentColorExtractor.extract(
+            from: imageStore.image(at: event.coverImagePath)
+        )
+    }
 
     var body: some View {
         ScrollView {
@@ -64,6 +81,7 @@ struct LiveDetailView: View {
         }
         .navigationTitle("detail.title")
         .navigationBarTitleDisplayMode(.inline)
+        .tint(ThemeSystem.detailAccentColor(for: settings, artworkColor: artworkAccentColor))
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("common.edit", systemImage: "pencil", action: onEdit)

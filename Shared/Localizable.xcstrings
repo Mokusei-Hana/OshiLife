@@ -100,6 +100,7 @@
     "settings.about.section" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "このアプリについて" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关于" } } } },
     "settings.accent.artwork" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "アートワークカラー" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "封面颜色" } } } },
     "settings.accent.custom" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "カスタム" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "自定义" } } } },
+    "settings.accent.custom_color" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "カスタムカラー" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "自定义颜色" } } } },
     "settings.accent.default" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "OshiLifeデフォルト" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "OshiLife 默认" } } } },
     "settings.accent_color_mode" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "アクセントカラーモード" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "强调色模式" } } } },
     "settings.app_appearance" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "アプリの外観" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "应用外观" } } } },
