@@ -126,6 +126,7 @@ struct LiveListView: View {
                     }
                 } else {
                     eventContent(viewModel.filteredEvents)
+                        .id(settings.homeDisplayStyle)
                         .refreshable { viewModel.load() }
                 }
             }

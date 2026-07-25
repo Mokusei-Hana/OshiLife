@@ -224,35 +224,15 @@ struct LiveDetailView: View {
 
     private var ticketSection: some View {
         detailSection("editor.tickets") {
-            VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("detail.available_tickets")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 12) {
+                Text("detail.available_tickets")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
 
-                    ForEach(Array(event.ticketOptions.enumerated()), id: \.element.id) { index, option in
-                        ticketRow(option)
-                        if index < event.ticketOptions.count - 1 {
-                            Divider()
-                        }
-                    }
-                }
-
-                if let selectedTicket = event.selectedTicket {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Label("field.selected_ticket", systemImage: "checkmark.circle.fill")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.tint)
-                        ticketRow(selectedTicket, isSelected: true)
-                    }
-                    .padding(14)
-                    .background(
-                        .tint.opacity(0.12),
-                        in: .rect(cornerRadius: DesignRadius.small)
-                    )
-                    .overlay {
-                        RoundedRectangle(cornerRadius: DesignRadius.small)
-                            .stroke(.tint.opacity(0.45), lineWidth: 1)
+                ForEach(Array(event.ticketOptions.enumerated()), id: \.element.id) { index, option in
+                    ticketRow(option, isSelected: option.id == event.selectedTicketID)
+                    if index < event.ticketOptions.count - 1 {
+                        Divider()
                     }
                 }
             }
@@ -285,6 +265,11 @@ struct LiveDetailView: View {
                     Text(description)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+                if isSelected {
+                    Label("ticket.selected", systemImage: "checkmark.circle.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tint)
                 }
             }
             Spacer(minLength: 8)

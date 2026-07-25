@@ -27,6 +27,8 @@ struct RootView: View {
     }
 
     var body: some View {
+        @Bindable var settings = settings
+
         LiveListView(
             liveStore: liveStore,
             imageStore: imageStore,
