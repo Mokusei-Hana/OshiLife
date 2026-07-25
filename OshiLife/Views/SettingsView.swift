@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Bindable var settings: AppSettings
     private let versionInfo: AppVersionInfo
 
@@ -25,6 +26,22 @@ struct SettingsView: View {
                 Picker("settings.accent_color_mode", selection: $settings.accentColorMode) {
                     ForEach(AccentColorMode.allCases) { mode in
                         Text(mode.title).tag(mode)
+                    }
+                }
+
+                if settings.accentColorMode == .oshiColor {
+                    Picker("settings.accent.oshi_color", selection: $settings.oshiColor) {
+                        ForEach(OshiColor.allCases) { oshiColor in
+                            HStack {
+                                Circle()
+                                    .fill(oshiColor.primaryColor(
+                                        for: settings.appearance.colorScheme ?? colorScheme
+                                    ))
+                                    .frame(width: 14, height: 14)
+                                Text(oshiColor.displayName)
+                            }
+                            .tag(oshiColor)
+                        }
                     }
                 }
 
@@ -98,7 +115,7 @@ private extension AccentColorMode {
     var title: LocalizedStringResource {
         switch self {
         case .oshiLifeDefault: "settings.accent.default"
-        case .artworkColor: "settings.accent.artwork"
+        case .oshiColor: "settings.accent.oshi"
         case .custom: "settings.accent.custom"
         }
     }

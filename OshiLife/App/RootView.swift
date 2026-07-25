@@ -2,6 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct RootView: View {
+    @Environment(\.colorScheme) private var colorScheme
     private let liveStore: LiveStore
     private let imageStore: ImageStore
     private let pendingStore: PendingImportStore?
@@ -33,7 +34,10 @@ struct RootView: View {
             startupWarning: startupWarning
         )
         .environment(settings)
-        .tint(ThemeSystem.appAccentColor(for: settings))
+        .tint(ThemeSystem.palette(
+            for: settings,
+            colorScheme: settings.appearance.colorScheme ?? colorScheme
+        ).primary)
         .preferredColorScheme(settings.appearance.colorScheme)
     }
 }

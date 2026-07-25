@@ -1,4 +1,3 @@
-import CoreImage
 import SwiftUI
 import UIKit
 
@@ -50,76 +49,117 @@ struct AccentColorValue: Codable, Equatable {
     var color: Color {
         Color(.sRGB, red: red, green: green, blue: blue, opacity: alpha)
     }
+
+    var isValid: Bool {
+        [red, green, blue, alpha].allSatisfy { $0.isFinite && (0...1).contains($0) }
+    }
+}
+
+enum OshiColor: String, CaseIterable, Codable, Identifiable {
+    case white
+    case blue
+    case red
+    case green
+    case yellow
+    case orange
+    case pink
+    case purple
+    case aqua
+
+    var id: String { rawValue }
+
+    var displayName: LocalizedStringResource {
+        switch self {
+        case .white: "oshi_color.white"
+        case .blue: "oshi_color.blue"
+        case .red: "oshi_color.red"
+        case .green: "oshi_color.green"
+        case .yellow: "oshi_color.yellow"
+        case .orange: "oshi_color.orange"
+        case .pink: "oshi_color.pink"
+        case .purple: "oshi_color.purple"
+        case .aqua: "oshi_color.aqua"
+        }
+    }
+
+    func primaryColor(for colorScheme: ColorScheme) -> Color {
+        if self == .white {
+            return colorScheme == .dark
+                ? .white
+                : Color(red: 0.48, green: 0.50, blue: 0.55)
+        }
+        return baseColor
+    }
+
+    func lightBackgroundColor(for colorScheme: ColorScheme) -> Color {
+        if self == .white {
+            return colorScheme == .dark
+                ? .white.opacity(0.14)
+                : Color(red: 0.96, green: 0.96, blue: 0.97)
+        }
+        return baseColor.opacity(colorScheme == .dark ? 0.18 : 0.12)
+    }
+
+    func borderColor(for colorScheme: ColorScheme) -> Color {
+        if self == .white {
+            return colorScheme == .dark
+                ? .white.opacity(0.42)
+                : Color(red: 0.78, green: 0.79, blue: 0.82)
+        }
+        return baseColor.opacity(colorScheme == .dark ? 0.60 : 0.42)
+    }
+
+    private var baseColor: Color {
+        switch self {
+        case .white: .white
+        case .blue: Color(red: 0.10, green: 0.45, blue: 0.92)
+        case .red: Color(red: 0.90, green: 0.16, blue: 0.20)
+        case .green: Color(red: 0.15, green: 0.65, blue: 0.32)
+        case .yellow: Color(red: 0.95, green: 0.70, blue: 0.05)
+        case .orange: Color(red: 0.95, green: 0.42, blue: 0.08)
+        case .pink: Color(red: 0.94, green: 0.30, blue: 0.58)
+        case .purple: Color(red: 0.64, green: 0.28, blue: 0.88)
+        case .aqua: Color(red: 0.00, green: 0.68, blue: 0.72)
+        }
+    }
+}
+
+struct ThemePalette {
+    let primary: Color
+    let background: Color
+    let border: Color
 }
 
 enum ThemeSystem {
     static let locationColor = Color.green
+    static let warningColor = Color.orange
+    static let successColor = Color.green
+    static let errorColor = Color.red
 
-    static func appAccentColor(for settings: AppSettings) -> Color {
-        switch settings.accentColorMode {
-        case .custom:
-            settings.customAccentColor.color
-        case .oshiLifeDefault, .artworkColor:
-            .accentColor
-        }
-    }
-
-    static func detailAccentColor(
+    static func palette(
         for settings: AppSettings,
-        artworkColor: AccentColorValue?
-    ) -> Color {
+        colorScheme: ColorScheme
+    ) -> ThemePalette {
         switch settings.accentColorMode {
-        case .artworkColor:
-            (artworkColor ?? .oshiLifeDefault).color
-        case .custom:
-            settings.customAccentColor.color
         case .oshiLifeDefault:
-            .accentColor
-        }
-    }
-}
-
-enum ArtworkAccentColorExtractor {
-    static func extract(
-        from image: UIImage?,
-        fallback: AccentColorValue = .oshiLifeDefault
-    ) -> AccentColorValue {
-        guard
-            let image,
-            let inputImage = CIImage(image: image),
-            !inputImage.extent.isEmpty,
-            let filter = CIFilter(name: "CIAreaAverage")
-        else {
-            return fallback
-        }
-
-        filter.setValue(inputImage, forKey: kCIInputImageKey)
-        filter.setValue(CIVector(cgRect: inputImage.extent), forKey: kCIInputExtentKey)
-
-        guard let outputImage = filter.outputImage else {
-            return fallback
-        }
-
-        var pixel = [UInt8](repeating: 0, count: 4)
-        CIContext(options: [.workingColorSpace: NSNull()])
-            .render(
-                outputImage,
-                toBitmap: &pixel,
-                rowBytes: 4,
-                bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
-                format: .RGBA8,
-                colorSpace: CGColorSpace(name: CGColorSpace.sRGB)
+            return ThemePalette(
+                primary: .accentColor,
+                background: .accentColor.opacity(colorScheme == .dark ? 0.18 : 0.12),
+                border: .accentColor.opacity(colorScheme == .dark ? 0.60 : 0.42)
             )
-
-        guard pixel[3] > 0 else {
-            return fallback
+        case .oshiColor:
+            return ThemePalette(
+                primary: settings.oshiColor.primaryColor(for: colorScheme),
+                background: settings.oshiColor.lightBackgroundColor(for: colorScheme),
+                border: settings.oshiColor.borderColor(for: colorScheme)
+            )
+        case .custom:
+            let color = settings.customAccentColor.color
+            return ThemePalette(
+                primary: color,
+                background: color.opacity(colorScheme == .dark ? 0.18 : 0.12),
+                border: color.opacity(colorScheme == .dark ? 0.60 : 0.42)
+            )
         }
-
-        return AccentColorValue(
-            red: Double(pixel[0]) / 255,
-            green: Double(pixel[1]) / 255,
-            blue: Double(pixel[2]) / 255,
-            alpha: 1
-        )
     }
 }

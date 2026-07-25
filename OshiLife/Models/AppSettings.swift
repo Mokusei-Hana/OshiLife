@@ -3,7 +3,7 @@ import SwiftUI
 
 enum AccentColorMode: String, CaseIterable, Identifiable {
     case oshiLifeDefault
-    case artworkColor
+    case oshiColor
     case custom
 
     var id: String { rawValue }
@@ -48,6 +48,7 @@ final class AppSettings {
         static let customAccentColor = "settings.customAccentColor"
         static let homeDisplayStyle = "settings.homeDisplayStyle"
         static let language = "settings.language"
+        static let oshiColor = "settings.oshiColor"
         static let legacyHomeDisplayStyle = "eventDisplayMode"
     }
 
@@ -69,6 +70,10 @@ final class AppSettings {
         }
     }
 
+    var oshiColor: OshiColor {
+        didSet { defaults.set(oshiColor.rawValue, forKey: Key.oshiColor) }
+    }
+
     var homeDisplayStyle: HomeDisplayStyle {
         didSet { defaults.set(homeDisplayStyle.rawValue, forKey: Key.homeDisplayStyle) }
     }
@@ -87,7 +92,11 @@ final class AppSettings {
         ) ?? .system
         customAccentColor = defaults.data(forKey: Key.customAccentColor)
             .flatMap { try? JSONDecoder().decode(AccentColorValue.self, from: $0) }
+            .flatMap { $0.isValid ? $0 : nil }
             ?? .oshiLifeDefault
+        oshiColor = OshiColor(
+            rawValue: defaults.string(forKey: Key.oshiColor) ?? ""
+        ) ?? .purple
         homeDisplayStyle = HomeDisplayStyle(
             rawValue: defaults.string(forKey: Key.homeDisplayStyle)
                 ?? defaults.string(forKey: Key.legacyHomeDisplayStyle)

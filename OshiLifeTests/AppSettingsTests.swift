@@ -26,26 +26,29 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(settings.accentColorMode, .oshiLifeDefault)
         XCTAssertEqual(settings.appearance, .system)
         XCTAssertEqual(settings.customAccentColor, .oshiLifeDefault)
+        XCTAssertEqual(settings.oshiColor, .purple)
         XCTAssertEqual(settings.homeDisplayStyle, .card)
         XCTAssertEqual(settings.language, .system)
     }
 
     func testPersistsSelections() {
         let settings = AppSettings(defaults: defaults)
-        settings.accentColorMode = .artworkColor
+        settings.accentColorMode = .oshiColor
         settings.appearance = .dark
         settings.customAccentColor = AccentColorValue(red: 0.1, green: 0.2, blue: 0.3)
+        settings.oshiColor = .blue
         settings.homeDisplayStyle = .list
         settings.language = .simplifiedChinese
 
         let reloaded = AppSettings(defaults: defaults)
 
-        XCTAssertEqual(reloaded.accentColorMode, .artworkColor)
+        XCTAssertEqual(reloaded.accentColorMode, .oshiColor)
         XCTAssertEqual(reloaded.appearance, .dark)
         XCTAssertEqual(
             reloaded.customAccentColor,
             AccentColorValue(red: 0.1, green: 0.2, blue: 0.3)
         )
+        XCTAssertEqual(reloaded.oshiColor, .blue)
         XCTAssertEqual(reloaded.homeDisplayStyle, .list)
         XCTAssertEqual(reloaded.language, .simplifiedChinese)
     }
@@ -55,6 +58,7 @@ final class AppSettingsTests: XCTestCase {
         defaults.set("unknown", forKey: "settings.appearance")
         defaults.set("unknown", forKey: "settings.homeDisplayStyle")
         defaults.set("unknown", forKey: "settings.language")
+        defaults.set("unknown", forKey: "settings.oshiColor")
 
         let settings = AppSettings(defaults: defaults)
 
@@ -62,6 +66,15 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(settings.appearance, .system)
         XCTAssertEqual(settings.homeDisplayStyle, .card)
         XCTAssertEqual(settings.language, .system)
+        XCTAssertEqual(settings.oshiColor, .purple)
+    }
+
+    func testInvalidCustomColorFallsBackToDefault() {
+        defaults.set(Data("invalid".utf8), forKey: "settings.customAccentColor")
+
+        let settings = AppSettings(defaults: defaults)
+
+        XCTAssertEqual(settings.customAccentColor, .oshiLifeDefault)
     }
 
     func testMigratesLegacyHomeDisplayStyle() {

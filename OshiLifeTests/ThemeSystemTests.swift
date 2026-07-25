@@ -12,11 +12,18 @@ final class ThemeSystemTests: XCTestCase {
         XCTAssertEqual(decoded, color)
     }
 
-    func testArtworkExtractionUsesFallbackWithoutImage() {
-        let fallback = AccentColorValue(red: 0.2, green: 0.4, blue: 0.6)
+    func testOshiColorEncodingRoundTrip() throws {
+        let data = try JSONEncoder().encode(OshiColor.aqua)
+        let decoded = try JSONDecoder().decode(OshiColor.self, from: data)
 
-        let extracted = ArtworkAccentColorExtractor.extract(from: nil, fallback: fallback)
+        XCTAssertEqual(decoded, .aqua)
+    }
 
-        XCTAssertEqual(extracted, fallback)
+    func testWhiteUsesReadableFallbackInLightMode() {
+        let primary = AccentColorValue(
+            color: OshiColor.white.primaryColor(for: .light)
+        )
+
+        XCTAssertNotEqual(primary, AccentColorValue(red: 1, green: 1, blue: 1))
     }
 }
