@@ -111,7 +111,7 @@ struct LiveDetailView: View {
                 imageStore: imageStore,
                 aspectRatio: 4.0 / 5.0
             )
-            .clipShape(.rect(cornerRadius: 24))
+            .clipShape(.rect(cornerRadius: DesignRadius.large))
             .overlay(alignment: .topTrailing) {
                 StatusBadge(status: event.status)
                     .padding(16)
@@ -174,6 +174,7 @@ struct LiveDetailView: View {
                         HStack(spacing: 12) {
                             Image(systemName: "mappin.and.ellipse")
                                 .frame(width: 20)
+                                .foregroundStyle(.secondary)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 if !event.venue.isEmpty {
@@ -194,6 +195,12 @@ struct LiveDetailView: View {
                                 .foregroundStyle(.tertiary)
                         }
                         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            .tint.opacity(0.08),
+                            in: .rect(cornerRadius: DesignRadius.medium)
+                        )
                         .contentShape(.rect)
                     }
                     .buttonStyle(.plain)
@@ -245,9 +252,12 @@ struct LiveDetailView: View {
                         ticketRow(selectedTicket, isSelected: true)
                     }
                     .padding(14)
-                    .background(.tint.opacity(0.12), in: .rect(cornerRadius: 14))
+                    .background(
+                        .tint.opacity(0.12),
+                        in: .rect(cornerRadius: DesignRadius.small)
+                    )
                     .overlay {
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: DesignRadius.small)
                             .stroke(.tint.opacity(0.45), lineWidth: 1)
                     }
                 }
@@ -304,7 +314,7 @@ struct LiveDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .background(.regularMaterial, in: .rect(cornerRadius: 22))
+        .background(.regularMaterial, in: .rect(cornerRadius: DesignRadius.large))
     }
 
     private var mapQuery: String {

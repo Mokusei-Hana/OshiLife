@@ -12,7 +12,7 @@ struct HomeEventCarouselCard: View {
                 imageStore: imageStore,
                 height: 310
             )
-            .clipShape(.rect(cornerRadius: 24))
+            .clipShape(.rect(cornerRadius: DesignRadius.large))
             .overlay(alignment: .topTrailing) {
                 StatusBadge(status: event.status)
                     .padding(14)
@@ -40,10 +40,7 @@ struct HomeEventCarouselCard: View {
                 .foregroundStyle(.secondary)
 
                 if !event.venue.isEmpty {
-                    Label(event.venue, systemImage: "mappin.and.ellipse")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    VenueTag(venue: event.venue)
                 }
             }
             .padding(.horizontal, 16)
@@ -83,12 +80,12 @@ struct HistoricalEventCard: View {
         }
         .frame(width: 208)
         .background(.regularMaterial)
-        .clipShape(.rect(cornerRadius: 18))
+        .clipShape(.rect(cornerRadius: DesignRadius.medium))
         .overlay {
-            RoundedRectangle(cornerRadius: 18)
+            RoundedRectangle(cornerRadius: DesignRadius.medium)
                 .stroke(.white.opacity(0.12), lineWidth: 1)
         }
-        .contentShape(.rect(cornerRadius: 18))
+        .contentShape(.rect(cornerRadius: DesignRadius.medium))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text("card.accessibility \(event.artistName) \(event.title)"))
         .accessibilityIdentifier("historicalEventCard")

@@ -346,13 +346,13 @@ struct LiveListView: View {
         }
         .frame(width: width)
         .background(.regularMaterial)
-        .clipShape(.rect(cornerRadius: 24))
+        .clipShape(.rect(cornerRadius: DesignRadius.large))
         .overlay {
-            RoundedRectangle(cornerRadius: 24)
+            RoundedRectangle(cornerRadius: DesignRadius.large)
                 .stroke(.primary.opacity(0.08), lineWidth: 1)
         }
         .shadow(color: .black.opacity(0.10), radius: 14, y: 6)
-        .contentShape(.rect(cornerRadius: 24))
+        .contentShape(.rect(cornerRadius: DesignRadius.large))
     }
 
     private func historicalEvents(_ events: [LiveEvent]) -> some View {

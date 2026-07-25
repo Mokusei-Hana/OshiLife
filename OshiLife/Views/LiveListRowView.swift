@@ -13,7 +13,7 @@ struct LiveListRowView: View {
                 height: 88
             )
             .frame(width: 82)
-            .clipShape(.rect(cornerRadius: 12))
+            .clipShape(.rect(cornerRadius: DesignRadius.small))
 
             VStack(alignment: .leading, spacing: 7) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -35,8 +35,7 @@ struct LiveListRowView: View {
                 .lineLimit(1)
 
                 if !event.venue.isEmpty {
-                    Label(event.venue, systemImage: "mappin.and.ellipse")
-                        .lineLimit(1)
+                    VenueTag(venue: event.venue)
                 }
 
                 if event.status == .planned, event.eventDate > now {
@@ -55,7 +54,7 @@ struct LiveListRowView: View {
         }
         .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
         .padding(10)
-        .glassEffect(.regular, in: .rect(cornerRadius: 18))
+        .glassEffect(.regular, in: .rect(cornerRadius: DesignRadius.medium))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text("card.accessibility \(event.artistName) \(event.title)"))
         .accessibilityIdentifier("eventListRow")

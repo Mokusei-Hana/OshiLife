@@ -28,18 +28,15 @@ struct LiveCardView: View {
                 .foregroundStyle(.secondary)
 
                 if !event.venue.isEmpty {
-                    Label(event.venue, systemImage: "mappin.and.ellipse")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    VenueTag(venue: event.venue)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
         }
         .frame(minHeight: 132)
-        .clipShape(.rect(cornerRadius: 22))
-        .glassEffect(.regular, in: .rect(cornerRadius: 22))
+        .clipShape(.rect(cornerRadius: DesignRadius.large))
+        .glassEffect(.regular, in: .rect(cornerRadius: DesignRadius.large))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text("card.accessibility \(event.artistName) \(event.title)"))
         .accessibilityIdentifier("eventCard")
