@@ -4,12 +4,20 @@ struct VenueTag: View {
     let venue: String
 
     var body: some View {
-        Label(venue, systemImage: "mappin.and.ellipse")
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(.secondary.opacity(0.08), in: .rect(cornerRadius: DesignRadius.small))
+        Label {
+            Text(venue)
+                .foregroundStyle(.primary)
+        } icon: {
+            Image(systemName: "mappin.and.ellipse")
+                .foregroundStyle(ThemeSystem.locationColor)
+        }
+        .font(.footnote)
+        .lineLimit(1)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(
+            ThemeSystem.locationColor.opacity(0.12),
+            in: .rect(cornerRadius: DesignRadius.small)
+        )
     }
 }

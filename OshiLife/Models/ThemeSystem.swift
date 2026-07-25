@@ -53,6 +53,8 @@ struct AccentColorValue: Codable, Equatable {
 }
 
 enum ThemeSystem {
+    static let locationColor = Color.green
+
     static func appAccentColor(for settings: AppSettings) -> Color {
         switch settings.accentColorMode {
         case .custom:

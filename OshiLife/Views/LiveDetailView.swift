@@ -174,7 +174,7 @@ struct LiveDetailView: View {
                         HStack(spacing: 12) {
                             Image(systemName: "mappin.and.ellipse")
                                 .frame(width: 20)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(ThemeSystem.locationColor)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 if !event.venue.isEmpty {
@@ -198,7 +198,7 @@ struct LiveDetailView: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(
-                            .tint.opacity(0.08),
+                            ThemeSystem.locationColor.opacity(0.08),
                             in: .rect(cornerRadius: DesignRadius.medium)
                         )
                         .contentShape(.rect)
