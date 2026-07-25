@@ -25,6 +25,7 @@ final class AppSettingsTests: XCTestCase {
 
         XCTAssertEqual(settings.accentColorMode, .oshiLifeDefault)
         XCTAssertEqual(settings.appearance, .system)
+        XCTAssertEqual(settings.homeDisplayStyle, .card)
         XCTAssertEqual(settings.language, .system)
     }
 
@@ -32,25 +33,38 @@ final class AppSettingsTests: XCTestCase {
         let settings = AppSettings(defaults: defaults)
         settings.accentColorMode = .artworkColor
         settings.appearance = .dark
+        settings.homeDisplayStyle = .list
         settings.language = .simplifiedChinese
 
         let reloaded = AppSettings(defaults: defaults)
 
         XCTAssertEqual(reloaded.accentColorMode, .artworkColor)
         XCTAssertEqual(reloaded.appearance, .dark)
+        XCTAssertEqual(reloaded.homeDisplayStyle, .list)
         XCTAssertEqual(reloaded.language, .simplifiedChinese)
     }
 
     func testUnknownRawValuesFallBackToDefaults() {
         defaults.set("unknown", forKey: "settings.accentColorMode")
         defaults.set("unknown", forKey: "settings.appearance")
+        defaults.set("unknown", forKey: "settings.homeDisplayStyle")
         defaults.set("unknown", forKey: "settings.language")
 
         let settings = AppSettings(defaults: defaults)
 
         XCTAssertEqual(settings.accentColorMode, .oshiLifeDefault)
         XCTAssertEqual(settings.appearance, .system)
+        XCTAssertEqual(settings.homeDisplayStyle, .card)
         XCTAssertEqual(settings.language, .system)
+    }
+
+    func testMigratesLegacyHomeDisplayStyle() {
+        defaults.set("list", forKey: "eventDisplayMode")
+
+        let settings = AppSettings(defaults: defaults)
+
+        XCTAssertEqual(settings.homeDisplayStyle, .list)
+        XCTAssertEqual(defaults.string(forKey: "settings.homeDisplayStyle"), "list")
     }
 
     func testAppearanceColorSchemeMapping() {

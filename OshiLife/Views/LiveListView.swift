@@ -6,27 +6,6 @@ private struct EditorRoute: Identifiable {
     let event: LiveEvent?
 }
 
-private enum EventDisplayMode: String, CaseIterable, Identifiable {
-    case list
-    case card
-
-    var id: String { rawValue }
-
-    var title: LocalizedStringResource {
-        switch self {
-        case .list: "display_mode.list"
-        case .card: "display_mode.card"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .list: "list.bullet"
-        case .card: "rectangle.grid.1x2"
-        }
-    }
-}
-
 struct LiveListView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(AppSettings.self) private var settings
@@ -34,11 +13,11 @@ struct LiveListView: View {
     private let imageStore: ImageStore
     private let startupWarning: String?
 
-    @AppStorage("eventDisplayMode") private var displayMode = EventDisplayMode.card
     @State private var viewModel: LiveListViewModel
     @State private var importCoordinator: PendingImportCoordinator
     @State private var editorRoute: EditorRoute?
     @State private var showsManualImport = false
+    @State private var showsSettings = false
     @State private var manualImportDraft: PendingShareImport?
     @State private var path: [UUID] = []
     @State private var focusedEventID: UUID?
@@ -142,9 +121,8 @@ struct LiveListView: View {
                     } description: {
                         Text("list.empty.message")
                     } actions: {
-                        Button("live.add") { editorRoute = EditorRoute(event: nil) }
+                        addMenu
                             .buttonStyle(.glassProminent)
-                            .accessibilityIdentifier("addLiveButton")
                     }
                 } else {
                     eventContent(viewModel.filteredEvents)
@@ -154,47 +132,58 @@ struct LiveListView: View {
             .navigationTitle("app.name")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    filterMenu(selection: $viewModel.filter)
+                    sidebarMenu(selection: $viewModel.filter)
                 }
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    NavigationLink {
-                        SettingsView(settings: settings)
-                    } label: {
-                        Label("settings.title", systemImage: "gearshape")
-                    }
-                    .accessibilityIdentifier("settingsButton")
-                    displayModeMenu
-                    Button("manual_import.title", systemImage: "square.and.arrow.down") {
-                        showsManualImport = true
-                    }
-                    .accessibilityIdentifier("manualXImportEntryButton")
-                    Button("live.add", systemImage: "plus") {
-                        editorRoute = EditorRoute(event: nil)
-                    }
+                ToolbarItem(placement: .topBarTrailing) {
+                    addMenu
                     .buttonStyle(.glassProminent)
-                    .accessibilityIdentifier("addLiveButton")
                 }
             }
             .navigationDestination(for: UUID.self) { id in
                 eventDestination(id: id, viewModel: viewModel)
             }
+            .navigationDestination(isPresented: $showsSettings) {
+                SettingsView(settings: settings)
+            }
         }
     }
 
-    private var displayModeMenu: some View {
+    private func sidebarMenu(
+        selection: Binding<LiveListViewModel.StatusFilter>
+    ) -> some View {
         Menu {
-            Picker("display_mode.title", selection: $displayMode) {
-                ForEach(EventDisplayMode.allCases) { mode in
-                    Label(mode.title, systemImage: mode.systemImage)
-                        .tag(mode)
+            Picker("filter.title", selection: selection) {
+                ForEach(LiveListViewModel.StatusFilter.allCases) { filter in
+                    Text(filter.title).tag(filter)
                 }
             }
+
+            Divider()
+
+            Button("settings.title", systemImage: "gearshape") {
+                showsSettings = true
+            }
+            .accessibilityIdentifier("settingsButton")
         } label: {
-            Image(systemName: displayMode.systemImage)
+            Label("home.sidebar", systemImage: "sidebar.left")
         }
-        .accessibilityLabel(Text("display_mode.title"))
-        .accessibilityValue(Text(displayMode.title))
-        .accessibilityIdentifier("displayModeMenu")
+        .accessibilityIdentifier("sidebarButton")
+    }
+
+    private var addMenu: some View {
+        Menu {
+            Button("live.create_manually", systemImage: "square.and.pencil") {
+                editorRoute = EditorRoute(event: nil)
+            }
+
+            Button("manual_import.title", systemImage: "square.and.arrow.down") {
+                showsManualImport = true
+            }
+            .accessibilityIdentifier("manualXImportEntryButton")
+        } label: {
+            Label("live.add", systemImage: "plus")
+        }
+        .accessibilityIdentifier("addLiveButton")
     }
 
     @ViewBuilder
@@ -216,23 +205,9 @@ struct LiveListView: View {
         path.removeAll { $0 == id }
     }
 
-    private func filterMenu(
-        selection: Binding<LiveListViewModel.StatusFilter>
-    ) -> some View {
-        Menu {
-            Picker("filter.title", selection: selection) {
-                ForEach(LiveListViewModel.StatusFilter.allCases) { filter in
-                    Text(filter.title).tag(filter)
-                }
-            }
-        } label: {
-            Label(selection.wrappedValue.title, systemImage: "line.3.horizontal.decrease")
-        }
-    }
-
     @ViewBuilder
     private func eventContent(_ events: [LiveEvent]) -> some View {
-        switch displayMode {
+        switch settings.homeDisplayStyle {
         case .card:
             homeContent(events)
         case .list:
@@ -241,18 +216,24 @@ struct LiveListView: View {
     }
 
     private func eventList(_ events: [LiveEvent]) -> some View {
-        ScrollView {
-            LazyVStack(spacing: 10) {
-                ForEach(events) { event in
-                    eventLink(event) {
-                        LiveListRowView(event: event)
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            ScrollView {
+                LazyVStack(spacing: 10) {
+                    ForEach(events) { event in
+                        eventLink(event) {
+                            LiveListRowView(
+                                event: event,
+                                imageStore: imageStore,
+                                now: context.date
+                            )
+                        }
                     }
                 }
+                .padding(.horizontal, 18)
+                .padding(.vertical, 14)
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 14)
         }
-        .animation(.snappy, value: displayMode)
+        .animation(.snappy, value: settings.homeDisplayStyle)
     }
 
     private func homeContent(_ events: [LiveEvent]) -> some View {

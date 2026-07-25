@@ -11,6 +11,16 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section("settings.home.section") {
+                Picker("settings.home.display_style", selection: $settings.homeDisplayStyle) {
+                    ForEach(HomeDisplayStyle.allCases) { style in
+                        Label(style.title, systemImage: style.systemImage)
+                            .tag(style)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
             Section("settings.appearance.section") {
                 Picker("settings.accent_color_mode", selection: $settings.accentColorMode) {
                     ForEach(AccentColorMode.allCases) { mode in
@@ -55,6 +65,22 @@ struct SettingsView: View {
 private enum ProjectLinks {
     static let github = URL(string: "https://github.com/Mokusei-Hana/OshiLife")!
     static let feedback = URL(string: "https://github.com/Mokusei-Hana/OshiLife/issues")!
+}
+
+private extension HomeDisplayStyle {
+    var title: LocalizedStringResource {
+        switch self {
+        case .card: "display_mode.card"
+        case .list: "display_mode.list"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .card: "rectangle.grid.1x2"
+        case .list: "list.bullet"
+        }
+    }
 }
 
 private extension AccentColorMode {
