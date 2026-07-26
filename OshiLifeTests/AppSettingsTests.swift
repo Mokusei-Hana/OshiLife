@@ -91,4 +91,10 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(AppAppearance.light.colorScheme, ColorScheme.light)
         XCTAssertEqual(AppAppearance.dark.colorScheme, ColorScheme.dark)
     }
+
+    func testLanguageLocaleMapping() {
+        XCTAssertNil(AppLanguage.system.locale)
+        XCTAssertEqual(AppLanguage.japanese.locale, Locale(identifier: "ja"))
+        XCTAssertEqual(AppLanguage.simplifiedChinese.locale, Locale(identifier: "zh-Hans"))
+    }
 }

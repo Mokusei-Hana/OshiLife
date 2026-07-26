@@ -28,6 +28,7 @@ struct RootView: View {
 
     var body: some View {
         @Bindable var settings = settings
+        let localeOverride = settings.language.locale
 
         LiveListView(
             liveStore: liveStore,
@@ -41,5 +42,10 @@ struct RootView: View {
             colorScheme: settings.appearance.colorScheme ?? colorScheme
         ).primary)
         .preferredColorScheme(settings.appearance.colorScheme)
+        .transformEnvironment(\.locale) { locale in
+            if let localeOverride {
+                locale = localeOverride
+            }
+        }
     }
 }

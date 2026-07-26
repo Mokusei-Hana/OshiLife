@@ -31,6 +31,14 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     case simplifiedChinese
 
     var id: String { rawValue }
+
+    var locale: Locale? {
+        switch self {
+        case .system: nil
+        case .japanese: Locale(identifier: "ja")
+        case .simplifiedChinese: Locale(identifier: "zh-Hans")
+        }
+    }
 }
 
 enum HomeDisplayStyle: String, CaseIterable, Identifiable {
