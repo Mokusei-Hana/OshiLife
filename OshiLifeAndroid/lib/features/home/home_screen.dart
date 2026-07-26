@@ -1,23 +1,71 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:oshilife/core/design/design_radius.dart';
-import 'package:oshilife/core/design/theme_system.dart';
+import 'package:oshilife/app/providers.dart';
+import 'package:oshilife/core/design/widgets/empty_state.dart';
+import 'package:oshilife/data/images/image_store.dart';
+import 'package:oshilife/data/models/live_event.dart';
+import 'package:oshilife/data/settings/app_settings.dart';
+import 'package:oshilife/features/home/dashboard_view.dart';
+import 'package:oshilife/features/home/event_list_row.dart';
+import 'package:oshilife/features/home/home_providers.dart';
+import 'package:oshilife/features/home/status_filter.dart';
 import 'package:oshilife/l10n/app_localizations.dart';
 
-/// M0/M1 placeholder for `LiveListView` — proves l10n and 推し色 theming.
-/// The real card/list home ships in M3.
+/// Port of `LiveListView.swift`: the single root screen. Switches between
+/// the card dashboard and the list per `AppSettings.homeDisplayStyle`,
+/// with status filtering, the add menu, and the empty states.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final oshiTheme = OshiTheme.of(context);
+    final settings = ref.watch(appSettingsProvider);
+    final filter = ref.watch(statusFilterProvider);
+    final eventsAsync = ref.watch(liveEventsProvider);
+    final now = ref.watch(clockProvider).value ?? DateTime.now();
+    final imageStore = ref.watch(imageStoreProvider).value;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.appName),
         actions: [
+          PopupMenuButton<StatusFilter>(
+            tooltip: l10n.filterTitle,
+            icon: Icon(
+              filter == StatusFilter.all ? Icons.filter_list : Icons.filter_alt,
+              color: filter == StatusFilter.all
+                  ? null
+                  : Theme.of(context).colorScheme.primary,
+            ),
+            initialValue: filter,
+            onSelected: (value) =>
+                ref.read(statusFilterProvider.notifier).state = value,
+            itemBuilder: (context) => [
+              for (final value in StatusFilter.values)
+                CheckedPopupMenuItem(
+                  value: value,
+                  checked: value == filter,
+                  child: Text(value.localizedName(l10n)),
+                ),
+            ],
+          ),
+          PopupMenuButton<String>(
+            tooltip: l10n.liveAdd,
+            icon: const Icon(Icons.add),
+            onSelected: (value) => context.push('/editor'),
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'create',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.edit_calendar_outlined),
+                  title: Text(l10n.liveCreateManually),
+                ),
+              ),
+            ],
+          ),
           IconButton(
             onPressed: () => context.push('/settings'),
             icon: const Icon(Icons.settings_outlined),
@@ -25,34 +73,101 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Center(
-        child: Container(
-          margin: const EdgeInsets.all(24),
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: oshiTheme.background,
-            borderRadius: BorderRadius.circular(DesignRadius.large),
-            border: Border.all(color: oshiTheme.border),
-          ),
+      body: eventsAsync.when(
+        loading: () => Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.queue_music, size: 48, color: oshiTheme.primary),
+              const CircularProgressIndicator(),
               const SizedBox(height: 12),
-              Text(
-                l10n.listEmptyTitle,
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                l10n.listEmptyMessage,
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
+              Text(l10n.commonLoading),
             ],
           ),
         ),
+        error: (error, stackTrace) => EmptyState(
+          icon: Icons.error_outline,
+          title: l10n.commonError,
+          message: '$error',
+        ),
+        data: (events) {
+          final filtered = events.where(filter.matches).toList();
+          if (filtered.isEmpty) {
+            return EmptyState(
+              icon: Icons.queue_music,
+              title: l10n.listEmptyTitle,
+              message: l10n.listEmptyMessage,
+              action: FilledButton.icon(
+                onPressed: () => context.push('/editor'),
+                icon: const Icon(Icons.add),
+                label: Text(l10n.liveCreateManually),
+              ),
+            );
+          }
+          return AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            child: settings.homeDisplayStyle == HomeDisplayStyle.card
+                ? DashboardView(
+                    key: const ValueKey(HomeDisplayStyle.card),
+                    events: filtered,
+                    now: now,
+                    imageStore: imageStore,
+                    onOpen: (event) => _openDetail(context, event),
+                    onEdit: (event) => _openEditor(context, event),
+                  )
+                : _EventList(
+                    key: const ValueKey(HomeDisplayStyle.list),
+                    events: filtered,
+                    now: now,
+                    imageStore: imageStore,
+                    onRefresh: () async => ref.invalidate(liveEventsProvider),
+                  ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _openDetail(BuildContext context, LiveEvent event) {
+    context.push('/event/${event.id}');
+  }
+
+  void _openEditor(BuildContext context, LiveEvent event) {
+    context.push('/editor', extra: event);
+  }
+}
+
+class _EventList extends StatelessWidget {
+  const _EventList({
+    super.key,
+    required this.events,
+    required this.now,
+    required this.imageStore,
+    required this.onRefresh,
+  });
+
+  final List<LiveEvent> events;
+  final DateTime now;
+  final ImageStore? imageStore;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: events.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 10),
+        itemBuilder: (context, index) {
+          final event = events[index];
+          return EventListRow(
+            event: event,
+            now: now,
+            imageStore: imageStore,
+            onOpen: () => context.push('/event/${event.id}'),
+            onEdit: () => context.push('/editor', extra: event),
+          );
+        },
       ),
     );
   }

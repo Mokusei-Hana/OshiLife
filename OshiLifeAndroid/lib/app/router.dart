@@ -1,11 +1,16 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:oshilife/data/models/live_event.dart';
 import 'package:oshilife/features/home/home_screen.dart';
 import 'package:oshilife/features/live_detail/detail_screen.dart';
+import 'package:oshilife/features/live_editor/editor_screen.dart';
 import 'package:oshilife/features/settings/settings_screen.dart';
 
-/// Route map mirroring the iOS navigation graph (plan §2.2): one root stack,
-/// detail pushes by event id, settings pushes as a screen.
+/// Route map mirroring the iOS navigation graph (plan §2.2): one root
+/// stack; detail pushes by event id; settings pushes as a screen; the
+/// editor presents as a fullscreen dialog (the iOS sheet) with an optional
+/// [LiveEvent] extra — null creates, non-null edits.
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     routes: [
@@ -21,6 +26,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'settings',
             builder: (context, state) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: 'editor',
+            pageBuilder: (context, state) => MaterialPage(
+              fullscreenDialog: true,
+              child: EditorScreen(event: state.extra as LiveEvent?),
+            ),
           ),
         ],
       ),
