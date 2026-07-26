@@ -148,6 +148,44 @@ final class LiveEditorViewModelTests: XCTestCase {
         XCTAssertTrue(saved.notes.contains("2026/8/9"))
     }
 
+    func testImportNotesDropURLNoiseButKeepAnnouncementText() throws {
+        let store = LiveStore(container: try ModelContainerFactory.makeInMemory())
+        let sourceURL = try XCTUnwrap(URL(string: "https://x.com/iLiFE_official/status/42"))
+        let shortURL = try XCTUnwrap(URL(string: "https://t.co/SPT3fbKaK6"))
+        let eventURL = try XCTUnwrap(URL(string: "https://ticketdive.com/event/idolsummerjungle2026"))
+        let details = EventImportDetails(
+            title: "IDOL SUMMER JUNGLE 2026",
+            date: Date(timeIntervalSince1970: 1_800_000_000),
+            venue: "お台場R地区",
+            linkedURL: eventURL,
+            shortenedLinkURLs: [shortURL]
+        )
+        let pending = PendingShareImport(
+            sourceURL: sourceURL,
+            authorName: "iLiFE!",
+            postText: """
+            8月9日は！「IDOL SUMMER JUNGLE 2026」に出演いたします❤︎
+
+            🎫チケット販売中！
+            https://t.co/SPT3fbKaK6
+
+            ※後日お知らせ予定。#iLiFE pic.twitter.com/T86Fe2z2Nb
+            """,
+            eventDetails: details
+        )
+
+        let viewModel = LiveEditorViewModel(store: store, pendingImport: pending)
+
+        // Media placeholders and the stored short link are noise in Notes.
+        XCTAssertFalse(viewModel.notes.contains("pic.twitter.com"))
+        XCTAssertFalse(viewModel.notes.contains("t.co/SPT3fbKaK6"))
+        XCTAssertTrue(viewModel.notes.contains("「IDOL SUMMER JUNGLE 2026」に出演いたします❤︎"))
+        XCTAssertTrue(viewModel.notes.contains("#iLiFE"))
+        XCTAssertTrue(viewModel.notes.contains("※後日お知らせ予定。"))
+        // The resolved TicketDive URL lives in the structured link field.
+        XCTAssertEqual(viewModel.ticketURLString, eventURL.absoluteString)
+    }
+
     func testTicketsRemainEditableWhenDetectionFoundNone() throws {
         let store = LiveStore(container: try ModelContainerFactory.makeInMemory())
         let sourceURL = try XCTUnwrap(URL(string: "https://x.com/oshi/status/42"))

@@ -180,7 +180,15 @@ final class LiveEditorViewModel {
 
     private static func importNotes(from pending: PendingShareImport?) -> String {
         guard let pending else { return "" }
-        var sections = [pending.postText].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+        // Media placeholders and URLs already stored in structured fields are
+        // noise in Notes; the announcement text itself is kept.
+        var storedURLs = [pending.sourceURL]
+        if let details = pending.eventDetails {
+            storedURLs.append(details.linkedURL)
+            storedURLs.append(contentsOf: details.shortenedLinkURLs)
+        }
+        var sections = [pending.postText.map { XPostNotesCleaner.cleanedNotes($0, removing: storedURLs) }]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         // The event model stores a single day, so a multi-day range is kept
         // in the notes instead of being dropped.

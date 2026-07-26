@@ -132,6 +132,7 @@ struct XOEmbedClient: XOEmbedFetching, Sendable {
         let text = attributed.string.trimmingCharacters(in: .whitespacesAndNewlines)
         #else
         let text = fragment
+            .replacingOccurrences(of: #"<br\s*/?>"#, with: "\n", options: [.regularExpression, .caseInsensitive])
             .replacingOccurrences(of: #"<[^>]+>"#, with: "", options: .regularExpression)
             .replacingOccurrences(of: "&amp;", with: "&")
             .replacingOccurrences(of: "&#39;", with: "'")

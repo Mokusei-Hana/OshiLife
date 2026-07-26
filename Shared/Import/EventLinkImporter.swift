@@ -18,8 +18,13 @@ struct EventLinkImporter: EventLinkImporting, Sendable {
 
     private let session: URLSession
     private let parsers: [any EventPageParsing]
+    private let shortLinkResolver: any ShortLinkResolving
 
-    init(session: URLSession? = nil, parsers: [any EventPageParsing] = EventLinkImporter.defaultParsers) {
+    init(
+        session: URLSession? = nil,
+        parsers: [any EventPageParsing] = EventLinkImporter.defaultParsers,
+        shortLinkResolver: any ShortLinkResolving = ShortLinkResolver()
+    ) {
         if let session {
             self.session = session
         } else {
@@ -30,19 +35,58 @@ struct EventLinkImporter: EventLinkImporting, Sendable {
             self.session = URLSession(configuration: configuration)
         }
         self.parsers = parsers
+        self.shortLinkResolver = shortLinkResolver
     }
 
     func importDetails(from urls: [URL]) async throws -> EventImportDetails? {
         let links = Self.uniqueWebURLs(urls)
-        guard let first = links.first else { return nil }
+        guard !links.isEmpty else { return nil }
 
-        if let supported = matchedURL(in: links) {
-            return try await fetchAndParse(supported)
+        // Short links must be expanded before classification: a t.co link
+        // gives no hint which parser its destination needs.
+        let resolution = await resolvingShortLinks(in: links)
+        guard let first = resolution.links.first else { return nil }
+
+        if let supported = matchedURL(in: resolution.links) {
+            var details = try await fetchAndParse(supported)
+            details.shortenedLinkURLs = resolution.shortLinks(for: details.linkedURL)
+            return details
         }
-        if first.host?.lowercased() == "t.co" {
-            return try await resolveShortLink(first)
+        var details = EventImportDetails(linkedURL: first)
+        details.shortenedLinkURLs = resolution.shortLinks(for: first)
+        return details
+    }
+
+    private struct ShortLinkResolution {
+        var links: [URL]
+        /// Original shortened URLs keyed by the destination they resolved to.
+        var origins: [String: [URL]]
+
+        func shortLinks(for url: URL) -> [URL] { origins[url.absoluteString] ?? [] }
+    }
+
+    /// Replaces every shortened link with its resolved destination, keeping
+    /// order, dropping duplicates between original and resolved URLs, and
+    /// discarding destinations that are not importable event links (such as
+    /// a t.co link that redirects back to an X post or attached media).
+    private func resolvingShortLinks(in links: [URL]) async -> ShortLinkResolution {
+        var resolved: [URL] = []
+        var origins: [String: [URL]] = [:]
+        var seen = Set<String>()
+        for link in links {
+            var destination = link
+            if ShortLinkResolver.isShortLink(link) {
+                destination = await shortLinkResolver.resolve(link)
+                if destination != link {
+                    guard Self.isImportableWebURL(destination) else { continue }
+                    origins[destination.absoluteString, default: []].append(link)
+                }
+            }
+            if seen.insert(destination.absoluteString).inserted {
+                resolved.append(destination)
+            }
         }
-        return EventImportDetails(linkedURL: first)
+        return ShortLinkResolution(links: resolved, origins: origins)
     }
 
     /// Picks the link handled by the highest-priority parser, so a link with
@@ -86,38 +130,47 @@ struct EventLinkImporter: EventLinkImporting, Sendable {
         return EventImportDetails(linkedURL: sourceURL)
     }
 
-    private func resolveShortLink(_ shortURL: URL) async throws -> EventImportDetails {
-        do {
-            let (data, response) = try await session.data(from: shortURL)
-            guard let resolvedURL = response.url else { return EventImportDetails(linkedURL: shortURL) }
-            guard data.count <= Self.maximumResponseBytes,
-                  parsers.contains(where: { $0.supports(resolvedURL) }),
-                  let html = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .japaneseEUC) else {
-                return EventImportDetails(linkedURL: resolvedURL)
-            }
-            return parse(html: html, sourceURL: resolvedURL)
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch {
-            return EventImportDetails(linkedURL: shortURL)
-        }
-    }
-
     static func urls(in text: String) -> [URL] {
+        #if canImport(Darwin)
         guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else {
             return []
         }
-        return detector.matches(in: text, range: NSRange(text.startIndex..., in: text)).compactMap(\.url)
+        return detector.matches(in: text, range: NSRange(text.startIndex..., in: text)).compactMap { $0.url }
+        #else
+        // NSDataDetector is unavailable in swift-corelibs-foundation; a
+        // regex approximation keeps Linux-based test runs working. The app
+        // itself always uses the NSDataDetector path above.
+        guard let expression = try? NSRegularExpression(
+            pattern: #"(?:https?://|www\.|pic\.(?:twitter|x)\.com/|t\.co/)[^\s<>"']+"#,
+            options: [.caseInsensitive]
+        ) else { return [] }
+        let trailingPunctuation = CharacterSet(charactersIn: ",.!?;:、。)]}")
+        return expression.matches(in: text, range: NSRange(text.startIndex..., in: text)).compactMap { match in
+            guard let range = Range(match.range, in: text) else { return nil }
+            var value = String(text[range]).trimmingCharacters(in: trailingPunctuation)
+            if !value.lowercased().hasPrefix("http") { value = "http://" + value }
+            return URL(string: value)
+        }
+        #endif
+    }
+
+    /// Hosts that never lead to an importable event page: X posts have their
+    /// own import path, and `pic.twitter.com` links are media attachment
+    /// placeholders, not event or ticket links.
+    private static let excludedHosts: Set<String> = [
+        "x.com", "www.x.com", "twitter.com", "www.twitter.com", "mobile.twitter.com",
+        "pic.twitter.com", "pic.x.com"
+    ]
+
+    private static func isImportableWebURL(_ url: URL) -> Bool {
+        guard ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { return false }
+        return !excludedHosts.contains(url.host?.lowercased() ?? "")
     }
 
     private static func uniqueWebURLs(_ urls: [URL]) -> [URL] {
         var seen = Set<String>()
         return urls.filter {
-            guard ["http", "https"].contains($0.scheme?.lowercased() ?? ""),
-                  !["x.com", "www.x.com", "twitter.com", "www.twitter.com"].contains($0.host?.lowercased() ?? "") else {
-                return false
-            }
-            return seen.insert($0.absoluteString).inserted
+            isImportableWebURL($0) && seen.insert($0.absoluteString).inserted
         }
     }
 }

@@ -14,6 +14,10 @@ struct EventImportDetails: Codable, Hashable, Sendable {
     /// Cover image candidate discovered on the event page (e.g. og:image).
     var imageURL: URL?
     var linkedURL: URL
+    /// Shortened URLs (e.g. t.co) from the post that redirected to
+    /// `linkedURL`. Kept so Notes cleanup can drop them once their
+    /// destination is stored in a structured field.
+    var shortenedLinkURLs: [URL]
 
     private enum CodingKeys: String, CodingKey {
         case title
@@ -27,6 +31,7 @@ struct EventImportDetails: Codable, Hashable, Sendable {
         case ticketInformation
         case imageURL
         case linkedURL
+        case shortenedLinkURLs
     }
 
     init(
@@ -40,7 +45,8 @@ struct EventImportDetails: Codable, Hashable, Sendable {
         ticketOptions: [TicketOption] = [],
         ticketInformation: String? = nil,
         imageURL: URL? = nil,
-        linkedURL: URL
+        linkedURL: URL,
+        shortenedLinkURLs: [URL] = []
     ) {
         self.title = title
         self.date = date
@@ -53,6 +59,7 @@ struct EventImportDetails: Codable, Hashable, Sendable {
         self.ticketInformation = ticketInformation
         self.imageURL = imageURL
         self.linkedURL = linkedURL
+        self.shortenedLinkURLs = shortenedLinkURLs
     }
 
     init(from decoder: any Decoder) throws {
@@ -68,6 +75,7 @@ struct EventImportDetails: Codable, Hashable, Sendable {
         ticketInformation = try container.decodeIfPresent(String.self, forKey: .ticketInformation)
         imageURL = try container.decodeIfPresent(URL.self, forKey: .imageURL)
         linkedURL = try container.decode(URL.self, forKey: .linkedURL)
+        shortenedLinkURLs = try container.decodeIfPresent([URL].self, forKey: .shortenedLinkURLs) ?? []
     }
 
     /// Fills fields this source could not recognize with values from another
@@ -77,7 +85,10 @@ struct EventImportDetails: Codable, Hashable, Sendable {
         var merged = self
         merged.title = title ?? other.title
         merged.date = date ?? other.date
-        merged.endDate = endDate ?? other.endDate
+        // An end date is only adopted together with the start date it
+        // belongs to; another source must not attach its end date to this
+        // source's day (e.g. an X post reshaping a multi-day website range).
+        merged.endDate = endDate ?? (date == nil ? other.endDate : nil)
         merged.venue = venue ?? other.venue
         merged.openTime = openTime ?? other.openTime
         merged.startTime = startTime ?? other.startTime
@@ -85,6 +96,7 @@ struct EventImportDetails: Codable, Hashable, Sendable {
         if merged.ticketOptions.isEmpty { merged.ticketOptions = other.ticketOptions }
         merged.ticketInformation = ticketInformation ?? other.ticketInformation
         merged.imageURL = imageURL ?? other.imageURL
+        if merged.shortenedLinkURLs.isEmpty { merged.shortenedLinkURLs = other.shortenedLinkURLs }
         return merged
     }
 }
