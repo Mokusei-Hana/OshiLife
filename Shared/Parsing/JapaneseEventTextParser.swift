@@ -114,7 +114,10 @@ enum JapaneseEventTextParser {
         return nil
     }
 
-    private static func dateRange(in text: String) -> (start: Date, end: Date?)? {
+    /// Recognizes a single date or a multi-day range such as
+    /// `2026/8/7(金)〜8/9(日)` or `2026年8月7日(金)-9日(日)`. Also used by
+    /// site-specific parsers whose pages share these announcement formats.
+    static func dateRange(in text: String) -> (start: Date, end: Date?)? {
         let weekday = #"(?:\([^)\n]{1,6}\))?"#
         let rangePatterns = [
             #"(20\d{2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日?\s*"# + weekday

@@ -13,7 +13,7 @@ struct EventLinkImporter: EventLinkImporting, Sendable {
     /// Site-specific parsers first, then the generic fallback pipeline for
     /// unsupported websites. Add new site parsers before the generic one.
     static var defaultParsers: [any EventPageParsing] {
-        [HeroinesEventPageParser(), GenericEventPageParser()]
+        [HeroinesEventPageParser(), TicketDiveEventPageParser(), GenericEventPageParser()]
     }
 
     private let session: URLSession
