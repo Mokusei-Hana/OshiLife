@@ -110,6 +110,28 @@ final class LiveEditorViewModel {
         longitude = nil
     }
 
+    @discardableResult
+    func addTicketOption(name: String, price: Int?, description: String?) -> TicketOption? {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return nil }
+        let trimmedDescription = description?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let option = TicketOption(
+            name: trimmedName,
+            price: price,
+            description: trimmedDescription?.isEmpty == false ? trimmedDescription : nil
+        )
+        ticketOptions.append(option)
+        return option
+    }
+
+    func removeTicketOptions(at offsets: IndexSet) {
+        let removedIDs = Set(offsets.compactMap { ticketOptions.indices.contains($0) ? ticketOptions[$0].id : nil })
+        ticketOptions.remove(atOffsets: offsets)
+        if let selectedTicketID, removedIDs.contains(selectedTicketID) {
+            self.selectedTicketID = nil
+        }
+    }
+
     func retryImportMetadata() async {
         guard let pendingImport else { return }
         isRetryingMetadata = true

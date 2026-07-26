@@ -94,6 +94,7 @@ struct LiveEditorView: View {
 
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var showsVenuePicker = false
+    @State private var showsTicketEntry = false
 
     var body: some View {
         NavigationStack {
@@ -215,8 +216,12 @@ struct LiveEditorView: View {
                     }
                 }
 
-                if !viewModel.ticketOptions.isEmpty {
-                    Section("editor.tickets") {
+                Section("editor.tickets") {
+                    if viewModel.ticketOptions.isEmpty {
+                        Text("ticket.empty")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    } else {
                         Picker("field.selected_ticket", selection: $viewModel.selectedTicketID) {
                             Text("ticket.none").tag(UUID?.none)
                             ForEach(viewModel.ticketOptions) { option in
@@ -240,6 +245,10 @@ struct LiveEditorView: View {
                                 Text(option.name)
                             }
                         }
+                        .onDelete { viewModel.removeTicketOptions(at: $0) }
+                    }
+                    Button("ticket.add", systemImage: "plus.circle") {
+                        showsTicketEntry = true
                     }
                 }
 
@@ -300,6 +309,12 @@ struct LiveEditorView: View {
                     viewModel.selectVenue(selection)
                 }
             }
+            .sheet(isPresented: $showsTicketEntry) {
+                TicketEntryView { name, price, description in
+                    viewModel.addTicketOption(name: name, price: price, description: description)
+                }
+                .presentationDetents([.medium])
+            }
         }
     }
 
@@ -350,5 +365,44 @@ struct LiveEditorView: View {
         Label(key, systemImage: "exclamationmark.circle")
             .font(.caption)
             .foregroundStyle(.red)
+    }
+}
+
+private struct TicketEntryView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var priceText = ""
+    @State private var descriptionText = ""
+
+    let onAdd: (String, Int?, String?) -> Void
+
+    private var canAdd: Bool {
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField("field.ticket_name", text: $name)
+                TextField("field.ticket_price", text: $priceText)
+                    .keyboardType(.numberPad)
+                TextField("field.ticket_description", text: $descriptionText, axis: .vertical)
+                    .lineLimit(1...3)
+            }
+            .navigationTitle("ticket.add")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("common.cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("common.save") {
+                        onAdd(name, Int(priceText.trimmingCharacters(in: .whitespaces)), descriptionText)
+                        dismiss()
+                    }
+                    .disabled(!canAdd)
+                }
+            }
+        }
     }
 }
