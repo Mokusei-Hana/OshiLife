@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 private struct EditorRoute: Identifiable {
     let id = UUID()
@@ -21,8 +20,6 @@ struct LiveListView: View {
     @State private var manualImportDraft: PendingShareImport?
     @State private var path: [UUID] = []
     @State private var focusedEventID: UUID?
-    @State private var showsCarouselPageIndicator = false
-    @State private var carouselIndicatorDismissTask: Task<Void, Never>?
 
     init(
         liveStore: LiveStore,
@@ -210,7 +207,13 @@ struct LiveListView: View {
     private func eventContent(_ events: [LiveEvent]) -> some View {
         switch settings.homeDisplayStyle {
         case .card:
-            homeContent(events)
+            HomeDashboardView(
+                events: events,
+                imageStore: imageStore,
+                focusedEventID: $focusedEventID,
+                onOpen: { path.append($0.id) },
+                onEdit: { editorRoute = EditorRoute(event: $0) }
+            )
         case .list:
             eventList(events)
         }
@@ -221,7 +224,11 @@ struct LiveListView: View {
             ScrollView {
                 LazyVStack(spacing: 10) {
                     ForEach(events) { event in
-                        eventLink(event) {
+                        EventLinkButton(
+                            event: event,
+                            onOpen: { path.append($0.id) },
+                            onEdit: { editorRoute = EditorRoute(event: $0) }
+                        ) {
                             LiveListRowView(
                                 event: event,
                                 imageStore: imageStore,
@@ -237,254 +244,6 @@ struct LiveListView: View {
         .animation(.snappy, value: settings.homeDisplayStyle)
     }
 
-    private func homeContent(_ events: [LiveEvent]) -> some View {
-        TimelineView(.periodic(from: .now, by: 60)) { context in
-            homeContent(events, now: context.date)
-        }
-    }
-
-    private func homeContent(_ events: [LiveEvent], now: Date) -> some View {
-        let upcoming = events
-            .filter { $0.status == .planned && $0.eventDate > now }
-            .sorted { $0.eventDate < $1.eventDate }
-        let history = events
-            .filter { $0.status == .attended }
-            .sorted { $0.eventDate > $1.eventDate }
-
-        return ScrollView {
-            LazyVStack(alignment: .leading, spacing: 28) {
-                VStack(alignment: .leading, spacing: 16) {
-                    sectionTitle("home.upcoming", systemImage: "calendar.badge.clock")
-                    if upcoming.isEmpty {
-                        ContentUnavailableView("home.no_upcoming", systemImage: "calendar")
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 180)
-                    } else {
-                        upcomingHero(events: upcoming, now: now)
-                    }
-                }
-
-                if !history.isEmpty {
-                    VStack(alignment: .leading, spacing: 14) {
-                        sectionTitle("home.attended", systemImage: "checkmark.seal")
-                        historicalEvents(history)
-                    }
-                }
-            }
-            .padding(.vertical, 18)
-        }
-        .scrollIndicators(.hidden)
-        .animation(.snappy, value: events.map(\.id))
-    }
-
-    private func upcomingHero(events: [LiveEvent], now: Date) -> some View {
-        VStack(spacing: 0) {
-            eventCarousel(events, now: now)
-
-            CarouselPageIndicator(
-                numberOfPages: events.count,
-                currentPage: focusedEventIndex(in: events)
-            )
-            .frame(height: 28)
-            .opacity(events.count > 1 && showsCarouselPageIndicator ? 1 : 0)
-            .accessibilityHidden(!showsCarouselPageIndicator)
-        }
-    }
-
-    private func eventCarousel(_ events: [LiveEvent], now: Date) -> some View {
-        GeometryReader { proxy in
-            let cardWidth = min(360, max(288, proxy.size.width - 32))
-            let horizontalMargin = max(16, (proxy.size.width - cardWidth) / 2)
-
-            ScrollView(.horizontal) {
-                LazyHStack(spacing: 16) {
-                    ForEach(events) { event in
-                        eventLink(event) {
-                            eventHeroCard(event, now: now, width: cardWidth)
-                            .scrollTransition(.interactive, axis: .horizontal) { content, phase in
-                                content
-                                    .scaleEffect(phase.isIdentity ? 1 : 0.85)
-                                    .opacity(phase.isIdentity ? 1 : 0.62)
-                            }
-                        }
-                        .zIndex(focusedEventID == event.id ? 1 : 0)
-                    }
-                }
-                .scrollTargetLayout()
-            }
-            .scrollClipDisabled()
-            .scrollIndicators(.hidden)
-            .scrollTargetBehavior(.viewAligned)
-            .scrollPosition(id: $focusedEventID, anchor: .center)
-            .contentMargins(.horizontal, horizontalMargin, for: .scrollContent)
-            .onScrollPhaseChange { _, newPhase in
-                updateCarouselIndicator(for: newPhase)
-            }
-            .onAppear {
-                synchronizeFocus(with: events)
-            }
-            .onChange(of: events.map(\.id)) { _, _ in
-                synchronizeFocus(with: events)
-            }
-            .onDisappear {
-                carouselIndicatorDismissTask?.cancel()
-                carouselIndicatorDismissTask = nil
-                showsCarouselPageIndicator = false
-            }
-        }
-        .frame(height: 640)
-    }
-
-    private func eventHeroCard(_ event: LiveEvent, now: Date, width: CGFloat) -> some View {
-        VStack(spacing: 0) {
-            HomeEventCarouselCard(
-                event: event,
-                imageStore: imageStore,
-                width: width
-            )
-
-            countdownCard(for: event, now: now)
-        }
-        .frame(width: width)
-        .background(.regularMaterial)
-        .clipShape(.rect(cornerRadius: DesignRadius.large))
-        .overlay {
-            RoundedRectangle(cornerRadius: DesignRadius.large)
-                .stroke(.primary.opacity(0.08), lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.10), radius: 14, y: 6)
-        .contentShape(.rect(cornerRadius: DesignRadius.large))
-    }
-
-    private func historicalEvents(_ events: [LiveEvent]) -> some View {
-        ScrollView(.horizontal) {
-            LazyHStack(spacing: 14) {
-                ForEach(events) { event in
-                    eventLink(event) {
-                        HistoricalEventCard(
-                            event: event,
-                            imageStore: imageStore
-                        )
-                    }
-                }
-            }
-            .scrollTargetLayout()
-        }
-        .frame(height: 196)
-        .scrollIndicators(.hidden)
-        .scrollTargetBehavior(.viewAligned)
-        .contentMargins(.horizontal, 18, for: .scrollContent)
-    }
-
-    private func eventLink<Label: View>(
-        _ event: LiveEvent,
-        @ViewBuilder label: () -> Label
-    ) -> some View {
-        Button(action: {
-            path.append(event.id)
-        }) {
-            label()
-        }
-        .buttonStyle(.plain)
-        .contextMenu {
-            Button("common.edit", systemImage: "pencil") {
-                editorRoute = EditorRoute(event: event)
-            }
-        }
-    }
-
-    private func focusedEventIndex(in events: [LiveEvent]) -> Int {
-        guard let focusedEventID else { return 0 }
-        return events.firstIndex { $0.id == focusedEventID } ?? 0
-    }
-
-    private func synchronizeFocus(with events: [LiveEvent]) {
-        guard focusedEventID == nil || !events.contains(where: { $0.id == focusedEventID }) else {
-            return
-        }
-        focusedEventID = events.first?.id
-    }
-
-    private func updateCarouselIndicator(for phase: ScrollPhase) {
-        carouselIndicatorDismissTask?.cancel()
-
-        switch phase {
-        case .tracking, .interacting, .decelerating:
-            withAnimation(.easeOut(duration: 0.16)) {
-                showsCarouselPageIndicator = true
-            }
-        case .idle:
-            guard showsCarouselPageIndicator else { return }
-            carouselIndicatorDismissTask = Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(700))
-                guard !Task.isCancelled else { return }
-                withAnimation(.easeOut(duration: 0.22)) {
-                    showsCarouselPageIndicator = false
-                }
-            }
-        case .animating:
-            break
-        @unknown default:
-            break
-        }
-    }
-
-    private func sectionTitle(
-        _ title: LocalizedStringResource,
-        systemImage: String
-    ) -> some View {
-        Label(title, systemImage: systemImage)
-            .font(.title2.bold())
-            .padding(.horizontal, 18)
-    }
-
-    @ViewBuilder
-    private func countdownCard(for event: LiveEvent?, now: Date) -> some View {
-        if let event {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Label("home.selected_live_countdown", systemImage: "timer")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.tint)
-
-                    Spacer(minLength: 8)
-
-                    Text(event.eventDate, format: .dateTime.year().month().day().weekday())
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-
-                Text(countdownText(until: event.eventDate, now: now))
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .foregroundStyle(.tint)
-                    .monospacedDigit()
-
-                Text(event.title)
-                    .font(.subheadline.weight(.medium))
-                    .lineLimit(2)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            .background(.tint.opacity(0.10))
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(.tint.opacity(0.18))
-                    .frame(height: 1)
-            }
-        }
-    }
-
-    private func countdownText(until date: Date, now: Date) -> String {
-        let seconds = max(0, Int(date.timeIntervalSince(now)))
-        let days = seconds / 86_400
-        let hours = (seconds % 86_400) / 3_600
-        let minutes = (seconds % 3_600) / 60
-        if days > 0 { return "\(days)d \(hours)h" }
-        if hours > 0 { return "\(hours)h \(minutes)m" }
-        return "\(minutes)m"
-    }
-
     private func warningBanner(_ message: String) -> some View {
         Label(message, systemImage: "exclamationmark.triangle.fill")
             .font(.footnote)
@@ -492,27 +251,5 @@ struct LiveListView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
             .glassEffect(.regular.tint(.orange.opacity(0.12)), in: .rect(cornerRadius: 16))
-    }
-}
-
-private struct CarouselPageIndicator: UIViewRepresentable {
-    let numberOfPages: Int
-    let currentPage: Int
-
-    func makeUIView(context: Context) -> UIPageControl {
-        let pageControl = UIPageControl()
-        pageControl.backgroundStyle = .minimal
-        pageControl.hidesForSinglePage = true
-        pageControl.allowsContinuousInteraction = false
-        pageControl.isUserInteractionEnabled = false
-        pageControl.isAccessibilityElement = false
-        pageControl.currentPageIndicatorTintColor = .label.withAlphaComponent(0.72)
-        pageControl.pageIndicatorTintColor = .secondaryLabel.withAlphaComponent(0.28)
-        return pageControl
-    }
-
-    func updateUIView(_ pageControl: UIPageControl, context: Context) {
-        pageControl.numberOfPages = numberOfPages
-        pageControl.currentPage = currentPage
     }
 }

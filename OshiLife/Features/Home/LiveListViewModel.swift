@@ -39,6 +39,18 @@ final class LiveListViewModel {
         return events.filter { $0.status == status }
     }
 
+    static func upcomingEvents(in events: [LiveEvent], now: Date) -> [LiveEvent] {
+        events
+            .filter { $0.status == .planned && $0.eventDate > now }
+            .sorted { $0.eventDate < $1.eventDate }
+    }
+
+    static func historicalEvents(in events: [LiveEvent]) -> [LiveEvent] {
+        events
+            .filter { $0.status == .attended }
+            .sorted { $0.eventDate > $1.eventDate }
+    }
+
     func load() {
         isLoading = true
         defer { isLoading = false }
