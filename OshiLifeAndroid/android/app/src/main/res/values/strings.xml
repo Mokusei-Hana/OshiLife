@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Share-sheet target label (iOS `share.title`); default locale is
+         Japanese, the app's development language. -->
+    <string name="share_target_label">OshiLifeに保存</string>
+</resources>

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show Locale, PlatformDispatcher;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ChangeNotifierProvider intentionally comes from the legacy surface:
@@ -9,6 +10,7 @@ import 'package:oshilife/data/db/database.dart';
 import 'package:oshilife/data/db/live_store.dart';
 import 'package:oshilife/data/images/image_store.dart';
 import 'package:oshilife/data/settings/app_settings.dart';
+import 'package:oshilife/l10n/app_localizations.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -38,4 +40,21 @@ final liveStoreProvider = Provider<LiveStore>(
 final imageStoreProvider = FutureProvider<ImageStore>((ref) async {
   final support = await getApplicationSupportDirectory();
   return ImageStore(root: Directory(support.path));
+});
+
+/// The active [AppLocalizations] resolved outside the widget tree, for
+/// layers that have no `BuildContext` (the import warning formatter, the
+/// share coordinator). Mirrors the app's `localeResolutionCallback`:
+/// explicit language setting first, then the device locale by language
+/// code, then Japanese.
+final l10nProvider = Provider<AppLocalizations>((ref) {
+  final settings = ref.watch(appSettingsProvider);
+  final preferred =
+      settings.language.locale ?? PlatformDispatcher.instance.locale;
+  for (final supported in AppLocalizations.supportedLocales) {
+    if (supported.languageCode == preferred.languageCode) {
+      return lookupAppLocalizations(supported);
+    }
+  }
+  return lookupAppLocalizations(const Locale('ja'));
 });

@@ -12,6 +12,9 @@ import 'package:oshilife/core/design/widgets/cover_image.dart';
 import 'package:oshilife/core/design/widgets/section_card.dart';
 import 'package:oshilife/data/models/live_event.dart';
 import 'package:oshilife/data/models/live_status.dart';
+import 'package:oshilife/features/import/import_editor_args.dart';
+import 'package:oshilife/features/import/import_error_messages.dart';
+import 'package:oshilife/features/import/import_providers.dart';
 import 'package:oshilife/features/live_editor/live_editor_view_model.dart';
 import 'package:oshilife/features/live_editor/ticket_entry_sheet.dart';
 import 'package:oshilife/l10n/app_localizations.dart';
@@ -20,10 +23,15 @@ import 'package:oshilife/l10n/app_localizations.dart';
 /// the optional-date pattern, toggle-gated times, inline URL validation,
 /// and the validation summary mirror iOS. The venue section is manual
 /// entry (plan §7.5 Option A — no MapKit autocomplete on Android v1).
+///
+/// With [importArgs] this is the iOS `ImportEditorHost`: prefilled from
+/// the pending share, duplicate banner on top, and closing asks for the
+/// discard confirmation instead of popping.
 class EditorScreen extends ConsumerStatefulWidget {
-  const EditorScreen({super.key, this.event});
+  const EditorScreen({super.key, this.event, this.importArgs});
 
   final LiveEvent? event;
+  final ImportEditorArgs? importArgs;
 
   @override
   ConsumerState<EditorScreen> createState() => _EditorScreenState();
@@ -37,10 +45,23 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     super.initState();
     // Route-scoped view model — the Flutter analogue of the iOS
     // host-owns-the-view-model sheet pattern.
+    final importArgs = widget.importArgs;
     _viewModel = LiveEditorViewModel(
       store: ref.read(liveStoreProvider),
       event: widget.event,
+      pendingImport: importArgs?.pending,
+      pendingImageBytes: importArgs?.imageBytes,
+      draftBuilder: importArgs == null
+          ? null
+          : ref.read(importDraftBuilderProvider),
+      // iOS wraps retry failures in `share.metadata_warning` too.
+      warningFormatter: importArgs == null ? null : _retryWarning,
     );
+  }
+
+  String _retryWarning(Object error) {
+    final l10n = ref.read(l10nProvider);
+    return l10n.shareMetadataWarning(describeImportError(l10n, error));
   }
 
   @override
@@ -65,6 +86,48 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     if (saved != null && mounted) context.pop();
   }
 
+  /// Import mode intercepts every close path (button and system back) with
+  /// the iOS discard confirmation dialog.
+  Future<void> _confirmDiscard() async {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.importDiscardTitle),
+        content: Text(l10n.importDiscardMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.commonContinueEditing),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.error,
+            ),
+            child: Text(l10n.importDiscardAction),
+          ),
+        ],
+      ),
+    );
+    if (discard == true && mounted) context.pop();
+  }
+
+  void _handleClose() {
+    if (widget.importArgs != null) {
+      _confirmDiscard();
+    } else {
+      context.pop();
+    }
+  }
+
+  /// iOS `onOpenDuplicate`: dismiss the import editor and show the saved
+  /// event instead — one route swap here.
+  void _openDuplicate(LiveEvent duplicate) {
+    context.pushReplacement('/event/${duplicate.id}');
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -72,70 +135,135 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       listenable: _viewModel,
       builder: (context, _) {
         final vm = _viewModel;
-        return Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.close),
-              tooltip: l10n.commonCancel,
-              onPressed: () => context.pop(),
-            ),
-            title: Text(
-              vm.isEditing ? l10n.editorEditTitle : l10n.editorNewTitle,
-            ),
-            actions: [
-              TextButton(
-                key: const Key('editorSaveButton'),
-                onPressed: vm.canSave ? _save : null,
-                child: vm.isSaving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(l10n.commonSave),
-              ),
-            ],
-          ),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-            children: [
-              if (vm.importWarning != null) ...[
-                _importWarningBanner(vm, l10n),
-                const SizedBox(height: 16),
-              ],
-              if (vm.errorMessage != null) ...[
-                _errorBanner(vm.errorMessage!),
-                const SizedBox(height: 16),
-              ],
-              _coverSection(vm, l10n),
-              const SizedBox(height: 16),
-              _basicSection(vm, l10n),
-              const SizedBox(height: 16),
-              _scheduleSection(vm, l10n),
-              const SizedBox(height: 16),
-              _locationSection(vm, l10n),
-              const SizedBox(height: 16),
-              _ticketsSection(vm, l10n),
-              const SizedBox(height: 16),
-              _linksSection(vm, l10n),
-              const SizedBox(height: 16),
-              SectionCard(
-                header: l10n.fieldNotes,
-                child: TextField(
-                  controller: vm.notes,
-                  minLines: 4,
-                  maxLines: 10,
-                  decoration: const InputDecoration(border: InputBorder.none),
-                ),
-              ),
-              if (vm.validationMessages.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                _validationSummary(vm, l10n),
-              ],
-            ],
-          ),
+        return PopScope(
+          // The iOS import sheet has interactive dismiss disabled; back
+          // must go through the discard confirmation.
+          canPop: widget.importArgs == null,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) _confirmDiscard();
+          },
+          child: _buildScaffold(context, vm, l10n),
         );
       },
+    );
+  }
+
+  Widget _buildScaffold(
+    BuildContext context,
+    LiveEditorViewModel vm,
+    AppLocalizations l10n,
+  ) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          tooltip: l10n.commonCancel,
+          onPressed: _handleClose,
+        ),
+        title: Text(vm.isEditing ? l10n.editorEditTitle : l10n.editorNewTitle),
+        actions: [
+          TextButton(
+            key: const Key('editorSaveButton'),
+            onPressed: vm.canSave ? _save : null,
+            child: vm.isSaving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(l10n.commonSave),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        children: [
+          if (widget.importArgs?.duplicate != null) ...[
+            _duplicateBanner(widget.importArgs!.duplicate!, l10n),
+            const SizedBox(height: 16),
+          ],
+          if (vm.importWarning != null) ...[
+            _importWarningBanner(vm, l10n),
+            const SizedBox(height: 16),
+          ],
+          if (vm.errorMessage != null) ...[
+            _errorBanner(vm.errorMessage!),
+            const SizedBox(height: 16),
+          ],
+          _coverSection(vm, l10n),
+          const SizedBox(height: 16),
+          _basicSection(vm, l10n),
+          const SizedBox(height: 16),
+          _scheduleSection(vm, l10n),
+          const SizedBox(height: 16),
+          _locationSection(vm, l10n),
+          const SizedBox(height: 16),
+          _ticketsSection(vm, l10n),
+          const SizedBox(height: 16),
+          _linksSection(vm, l10n),
+          const SizedBox(height: 16),
+          SectionCard(
+            header: l10n.fieldNotes,
+            child: TextField(
+              controller: vm.notes,
+              minLines: 4,
+              maxLines: 10,
+              decoration: const InputDecoration(border: InputBorder.none),
+            ),
+          ),
+          if (vm.validationMessages.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _validationSummary(vm, l10n),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Port of the iOS duplicate section: same source URL already saved,
+  /// with a jump to the existing event.
+  Widget _duplicateBanner(LiveEvent duplicate, AppLocalizations l10n) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(DesignRadius.medium),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.file_copy, size: 18, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.importDuplicateTitle,
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            l10n.importDuplicateMessage(duplicate.title),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => _openDuplicate(duplicate),
+              child: Text(l10n.importDuplicateOpen),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

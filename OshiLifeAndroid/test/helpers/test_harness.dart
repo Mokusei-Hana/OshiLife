@@ -11,6 +11,9 @@ import 'package:oshilife/data/db/live_store.dart';
 import 'package:oshilife/data/images/image_store.dart';
 import 'package:oshilife/data/models/live_event.dart';
 import 'package:oshilife/features/home/home_providers.dart';
+import 'package:oshilife/features/import/import_providers.dart';
+import 'package:oshilife/features/import/share_intent_bootstrap.dart';
+import 'package:oshilife/import/x_import_draft_builder.dart';
 import 'package:oshilife/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,10 +23,17 @@ final DateTime testNow = DateTime.fromMillisecondsSinceEpoch(1800000000 * 1000);
 /// Pumps the full app (theme, l10n, router) against an in-memory database
 /// and mocked preferences. The 60 s clock is overridden with a single
 /// fixed value so tests are deterministic and free of pending timers.
+///
+/// [draftBuilder] swaps the network-backed import builder for a stub;
+/// [withShareBootstrap] wraps the app in [ShareIntentBootstrap] so tests
+/// can drive the share-intent flow through a mocked `oshilife/share`
+/// channel.
 Future<void> pumpApp(
   WidgetTester tester, {
   Map<String, Object> prefs = const {},
   List<LiveEvent> seed = const [],
+  XImportDraftBuilder? draftBuilder,
+  bool withShareBootstrap = false,
 }) async {
   SharedPreferences.setMockInitialValues(prefs);
   final sharedPrefs = await SharedPreferences.getInstance();
@@ -51,8 +61,12 @@ Future<void> pumpApp(
           (ref) async => ImageStore(root: imageRoot),
         ),
         clockProvider.overrideWith((ref) => Stream<DateTime>.value(testNow)),
+        if (draftBuilder != null)
+          importDraftBuilderProvider.overrideWithValue(draftBuilder),
       ],
-      child: const OshiLifeApp(),
+      child: withShareBootstrap
+          ? const ShareIntentBootstrap(child: OshiLifeApp())
+          : const OshiLifeApp(),
     ),
   );
   // Let the streams (events, clock, image store) deliver.

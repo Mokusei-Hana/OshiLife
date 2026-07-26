@@ -10,6 +10,8 @@ import 'package:oshilife/features/home/dashboard_view.dart';
 import 'package:oshilife/features/home/event_list_row.dart';
 import 'package:oshilife/features/home/home_providers.dart';
 import 'package:oshilife/features/home/status_filter.dart';
+import 'package:oshilife/features/import/import_providers.dart';
+import 'package:oshilife/import/models/pending_share_import.dart';
 import 'package:oshilife/l10n/app_localizations.dart';
 
 /// Port of `LiveListView.swift`: the single root screen. Switches between
@@ -54,7 +56,10 @@ class HomeScreen extends ConsumerWidget {
           PopupMenuButton<String>(
             tooltip: l10n.liveAdd,
             icon: const Icon(Icons.add),
-            onSelected: (value) => context.push('/editor'),
+            onSelected: (value) => switch (value) {
+              'import' => _startManualImport(context, ref),
+              _ => context.push('/editor'),
+            },
             itemBuilder: (context) => [
               PopupMenuItem(
                 value: 'create',
@@ -62,6 +67,14 @@ class HomeScreen extends ConsumerWidget {
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.edit_calendar_outlined),
                   title: Text(l10n.liveCreateManually),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'import',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.save_alt),
+                  title: Text(l10n.manualImportTitle),
                 ),
               ),
             ],
@@ -92,14 +105,26 @@ class HomeScreen extends ConsumerWidget {
         data: (events) {
           final filtered = events.where(filter.matches).toList();
           if (filtered.isEmpty) {
+            // Like the iOS empty state, both add-menu entries are offered.
             return EmptyState(
               icon: Icons.queue_music,
               title: l10n.listEmptyTitle,
               message: l10n.listEmptyMessage,
-              action: FilledButton.icon(
-                onPressed: () => context.push('/editor'),
-                icon: const Icon(Icons.add),
-                label: Text(l10n.liveCreateManually),
+              action: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FilledButton.icon(
+                    onPressed: () => context.push('/editor'),
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.liveCreateManually),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => _startManualImport(context, ref),
+                    icon: const Icon(Icons.save_alt, size: 18),
+                    label: Text(l10n.manualImportTitle),
+                  ),
+                ],
               ),
             );
           }
@@ -133,6 +158,15 @@ class HomeScreen extends ConsumerWidget {
 
   void _openEditor(BuildContext context, LiveEvent event) {
     context.push('/editor', extra: event);
+  }
+
+  /// iOS presents the import editor when the manual sheet closes with a
+  /// draft; here the manual screen pops with it and the coordinator takes
+  /// over (duplicate lookup + route).
+  Future<void> _startManualImport(BuildContext context, WidgetRef ref) async {
+    final draft = await context.push<PendingShareImport>('/import/manual');
+    if (draft == null) return;
+    await ref.read(shareReceiveCoordinatorProvider).presentManual(draft);
   }
 }
 
