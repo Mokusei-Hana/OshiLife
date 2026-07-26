@@ -30,7 +30,15 @@ struct XImportDraftBuilder: Sendable {
             draft.authorName = metadata.authorName
             draft.postText = metadata.postText
             let contentURLs = metadata.linkedURLs + EventLinkImporter.urls(in: metadata.postText ?? "")
-            if let details = try await eventLinkImporter.importDetails(from: contentURLs) {
+            var details = try await eventLinkImporter.importDetails(from: contentURLs)
+            // Announcements often live in the post itself. Text-parsed values
+            // only fill fields the linked page could not provide.
+            if let postText = metadata.postText,
+               let textDetails = JapaneseEventTextParser.parse(postText)
+                .details(linkedURL: details?.linkedURL ?? metadata.canonicalURL) {
+                details = details.map { $0.fillingMissingFields(from: textDetails) } ?? textDetails
+            }
+            if let details {
                 draft.eventDetails = details
             }
         } catch is CancellationError {
@@ -60,6 +68,20 @@ struct XImportDraftBuilder: Sendable {
             throw CancellationError()
         } catch {
             // The current import behavior does not depend on media availability.
+        }
+
+        // Posts without media can still get a cover from the event page.
+        if draft.imageData == nil, let imageURL = draft.eventDetails?.imageURL {
+            do {
+                let data = try await imageDownloader.fetchImage(from: imageURL)
+                if !data.isEmpty {
+                    draft.imageData = data
+                }
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                // A missing cover image never blocks the import.
+            }
         }
         return draft
     }

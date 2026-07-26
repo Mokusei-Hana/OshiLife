@@ -102,6 +102,87 @@ final class XImportDraftBuilderTests: XCTestCase {
         XCTAssertEqual(draft.postText, "ライブ情報")
     }
 
+    func testParsesEventDetailsFromPostTextWithoutLinkedPage() async throws {
+        let canonicalURL = try XCTUnwrap(URL(string: "https://x.com/oshi/status/42"))
+        let metadata = XOEmbedMetadata(
+            canonicalURL: canonicalURL,
+            authorName: "推し",
+            postText: """
+            『夏の単独公演』
+            日程：2026年8月7日(金)
+            会場：Zepp Shinjuku
+            OPEN 17:00 / START 18:00
+            一般 ¥5,000
+            """
+        )
+
+        let draft = try await builder(client: StubClient(metadata: metadata))
+            .makeDraft(from: canonicalURL)
+
+        let details = try XCTUnwrap(draft.eventDetails)
+        XCTAssertEqual(details.title, "夏の単独公演")
+        XCTAssertEqual(details.venue, "Zepp Shinjuku")
+        XCTAssertNotNil(details.date)
+        XCTAssertNotNil(details.openTime)
+        XCTAssertEqual(details.ticketOptions.map(\.price), [5000])
+        XCTAssertEqual(details.linkedURL, canonicalURL)
+    }
+
+    func testPostTextOnlyFillsFieldsMissingFromLinkedPage() async throws {
+        let canonicalURL = try XCTUnwrap(URL(string: "https://x.com/oshi/status/42"))
+        let eventURL = try XCTUnwrap(URL(string: "https://tickets.example.jp/event/9"))
+        let linkedDate = Date(timeIntervalSince1970: 1_800_000_000)
+        let metadata = XOEmbedMetadata(
+            canonicalURL: canonicalURL,
+            authorName: "推し",
+            postText: "『ポスト側タイトル』\n会場：日本武道館",
+            linkedURLs: [eventURL]
+        )
+        let linkedDetails = EventImportDetails(
+            title: "リンク先タイトル",
+            date: linkedDate,
+            linkedURL: eventURL
+        )
+
+        let draft = try await builder(
+            client: StubClient(metadata: metadata),
+            eventLinkImporter: StubEventLinkImporter(details: linkedDetails)
+        ).makeDraft(from: canonicalURL)
+
+        let details = try XCTUnwrap(draft.eventDetails)
+        // Linked page values win; the post text only fills the missing venue.
+        XCTAssertEqual(details.title, "リンク先タイトル")
+        XCTAssertEqual(details.date, linkedDate)
+        XCTAssertEqual(details.venue, "日本武道館")
+        XCTAssertEqual(details.linkedURL, eventURL)
+    }
+
+    func testDownloadsEventPageCoverWhenPostHasNoMedia() async throws {
+        let canonicalURL = try XCTUnwrap(URL(string: "https://x.com/oshi/status/42"))
+        let eventURL = try XCTUnwrap(URL(string: "https://tickets.example.jp/event/9"))
+        let coverURL = try XCTUnwrap(URL(string: "https://tickets.example.jp/og.jpg"))
+        let metadata = XOEmbedMetadata(
+            canonicalURL: canonicalURL,
+            authorName: "推し",
+            postText: "ライブ情報",
+            linkedURLs: [eventURL]
+        )
+        let linkedDetails = EventImportDetails(
+            title: "イベント",
+            date: Date(timeIntervalSince1970: 1_800_000_000),
+            imageURL: coverURL,
+            linkedURL: eventURL
+        )
+
+        let draft = try await builder(
+            client: StubClient(metadata: metadata),
+            eventLinkImporter: StubEventLinkImporter(details: linkedDetails),
+            imageData: [coverURL: Data([0xFF, 0xD8, 0xFE])]
+        ).makeDraft(from: canonicalURL)
+
+        XCTAssertEqual(draft.imageData, Data([0xFF, 0xD8, 0xFE]))
+    }
+
     func testBuildsEditableDraftWhenMetadataFetchFails() async throws {
         let draft = try await builder(client: StubClient(metadata: nil))
             .makeDraft(from: try XCTUnwrap(URL(string: "https://x.com/oshi/status/42")))

@@ -10,10 +10,16 @@ protocol EventLinkImporting: Sendable {
 struct EventLinkImporter: EventLinkImporting, Sendable {
     static let maximumResponseBytes = 2 * 1_024 * 1_024
 
+    /// Site-specific parsers first, then the generic fallback pipeline for
+    /// unsupported websites. Add new site parsers before the generic one.
+    static var defaultParsers: [any EventPageParsing] {
+        [HeroinesEventPageParser(), GenericEventPageParser()]
+    }
+
     private let session: URLSession
     private let parsers: [any EventPageParsing]
 
-    init(session: URLSession? = nil, parsers: [any EventPageParsing] = [HeroinesEventPageParser()]) {
+    init(session: URLSession? = nil, parsers: [any EventPageParsing] = EventLinkImporter.defaultParsers) {
         if let session {
             self.session = session
         } else {
@@ -30,21 +36,26 @@ struct EventLinkImporter: EventLinkImporting, Sendable {
         let links = Self.uniqueWebURLs(urls)
         guard let first = links.first else { return nil }
 
-        if let supported = links.first(where: { url in parsers.contains { $0.supports(url) } }),
-           let parser = parsers.first(where: { $0.supports(supported) }) {
-            return try await fetchAndParse(supported, with: parser)
+        if let supported = matchedURL(in: links) {
+            return try await fetchAndParse(supported)
         }
-
         if first.host?.lowercased() == "t.co" {
             return try await resolveShortLink(first)
         }
         return EventImportDetails(linkedURL: first)
     }
 
-    private func fetchAndParse(
-        _ supported: URL,
-        with parser: any EventPageParsing
-    ) async throws -> EventImportDetails {
+    /// Picks the link handled by the highest-priority parser, so a link with
+    /// a site-specific parser wins over one that only the generic parser
+    /// understands.
+    private func matchedURL(in links: [URL]) -> URL? {
+        for parser in parsers {
+            if let url = links.first(where: parser.supports) { return url }
+        }
+        return nil
+    }
+
+    private func fetchAndParse(_ supported: URL) async throws -> EventImportDetails {
         do {
             var request = URLRequest(url: supported)
             request.setValue("text/html,application/xhtml+xml", forHTTPHeaderField: "Accept")
@@ -55,8 +66,7 @@ struct EventLinkImporter: EventLinkImporting, Sendable {
                   let html = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .japaneseEUC) else {
                 return EventImportDetails(linkedURL: supported)
             }
-            return parser.parse(html: html, sourceURL: supported)
-                ?? EventImportDetails(linkedURL: supported)
+            return parse(html: html, sourceURL: supported)
         } catch is CancellationError {
             throw CancellationError()
         } catch {
@@ -64,17 +74,28 @@ struct EventLinkImporter: EventLinkImporting, Sendable {
         }
     }
 
+    /// Tries every parser that supports the URL in priority order, so a
+    /// site-specific parser that recognizes nothing on a page still falls
+    /// through to the generic pipeline, and finally to a plain link.
+    private func parse(html: String, sourceURL: URL) -> EventImportDetails {
+        for parser in parsers where parser.supports(sourceURL) {
+            if let details = parser.parse(html: html, sourceURL: sourceURL) {
+                return details
+            }
+        }
+        return EventImportDetails(linkedURL: sourceURL)
+    }
+
     private func resolveShortLink(_ shortURL: URL) async throws -> EventImportDetails {
         do {
             let (data, response) = try await session.data(from: shortURL)
             guard let resolvedURL = response.url else { return EventImportDetails(linkedURL: shortURL) }
             guard data.count <= Self.maximumResponseBytes,
-                  let parser = parsers.first(where: { $0.supports(resolvedURL) }),
+                  parsers.contains(where: { $0.supports(resolvedURL) }),
                   let html = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .japaneseEUC) else {
                 return EventImportDetails(linkedURL: resolvedURL)
             }
-            return parser.parse(html: html, sourceURL: resolvedURL)
-                ?? EventImportDetails(linkedURL: resolvedURL)
+            return parse(html: html, sourceURL: resolvedURL)
         } catch is CancellationError {
             throw CancellationError()
         } catch {

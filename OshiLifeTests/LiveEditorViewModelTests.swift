@@ -120,6 +120,58 @@ final class LiveEditorViewModelTests: XCTestCase {
         XCTAssertEqual(saved.selectedTicketID, added.id)
     }
 
+    func testMultiDayImportKeepsFirstDayAndRecordsRangeInNotes() throws {
+        let store = LiveStore(container: try ModelContainerFactory.makeInMemory())
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Asia/Tokyo"))
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 8, day: 7)))
+        let end = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 8, day: 9)))
+        let sourceURL = try XCTUnwrap(URL(string: "https://x.com/oshi/status/42"))
+        let details = EventImportDetails(
+            title: "IDOL SUMMER JUNGLE 2026",
+            date: start,
+            endDate: end,
+            venue: "お台場R地区",
+            linkedURL: sourceURL
+        )
+        let pending = PendingShareImport(sourceURL: sourceURL, authorName: "公式", eventDetails: details)
+
+        let viewModel = LiveEditorViewModel(store: store, pendingImport: pending)
+
+        XCTAssertEqual(viewModel.eventDate, start)
+        XCTAssertTrue(viewModel.notes.contains("2026/8/7"))
+        XCTAssertTrue(viewModel.notes.contains("2026/8/9"))
+
+        viewModel.artistName = "推し"
+        let saved = try XCTUnwrap(viewModel.save(imageStore: ImageStore(rootURL: FileManager.default.temporaryDirectory)))
+        XCTAssertEqual(saved.eventDate, start)
+        XCTAssertTrue(saved.notes.contains("2026/8/9"))
+    }
+
+    func testTicketsRemainEditableWhenDetectionFoundNone() throws {
+        let store = LiveStore(container: try ModelContainerFactory.makeInMemory())
+        let sourceURL = try XCTUnwrap(URL(string: "https://x.com/oshi/status/42"))
+        // A partial import: fields were recognized but no ticket type was.
+        let details = EventImportDetails(
+            title: "ワンマンライブ",
+            date: Date(timeIntervalSince1970: 1_800_000_000),
+            venue: "Zepp Haneda",
+            linkedURL: sourceURL
+        )
+        let pending = PendingShareImport(sourceURL: sourceURL, authorName: "推し", eventDetails: details)
+
+        let viewModel = LiveEditorViewModel(store: store, pendingImport: pending)
+
+        XCTAssertTrue(viewModel.ticketOptions.isEmpty)
+        let added = try XCTUnwrap(viewModel.addTicketOption(name: "VIPチケット", price: 10000, description: "特典付き"))
+        viewModel.selectedTicketID = added.id
+        viewModel.artistName = "推し"
+
+        let saved = try XCTUnwrap(viewModel.save(imageStore: ImageStore(rootURL: FileManager.default.temporaryDirectory)))
+        XCTAssertEqual(saved.ticketOptions.map(\.name), ["VIPチケット"])
+        XCTAssertEqual(saved.selectedTicketID, added.id)
+    }
+
     func testAddTicketOptionRejectsBlankNameAndDropsEmptyDescription() throws {
         let store = LiveStore(container: try ModelContainerFactory.makeInMemory())
         let viewModel = LiveEditorViewModel(store: store)

@@ -182,6 +182,15 @@ final class LiveEditorViewModel {
         guard let pending else { return "" }
         var sections = [pending.postText].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
+        // The event model stores a single day, so a multi-day range is kept
+        // in the notes instead of being dropped.
+        if let start = pending.eventDetails?.date, let end = pending.eventDetails?.endDate {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone(identifier: "Asia/Tokyo")
+            formatter.dateFormat = "yyyy/M/d"
+            sections.append("日程: \(formatter.string(from: start)) 〜 \(formatter.string(from: end))")
+        }
         if let openTime = pending.eventDetails?.openTime {
             sections.append("OPEN \(openTime.formatted(date: .omitted, time: .shortened))")
         }

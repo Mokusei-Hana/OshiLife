@@ -1,8 +1,42 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 import XCTest
 @testable import OshiLife
 
 final class EventLinkImporterTests: XCTestCase {
+    /// Serves canned HTML per host so importer tests never touch the network.
+    private final class HostRoutingURLProtocolStub: URLProtocol, @unchecked Sendable {
+        nonisolated(unsafe) static var responsesByHost: [String: (status: Int, html: String)] = [:]
+
+        override class func canInit(with request: URLRequest) -> Bool { true }
+        override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+        override func startLoading() {
+            let host = request.url?.host?.lowercased() ?? ""
+            let stubbed = Self.responsesByHost[host] ?? (404, "")
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: stubbed.status,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "text/html; charset=utf-8"]
+            )!
+            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            client?.urlProtocol(self, didLoad: Data(stubbed.html.utf8))
+            client?.urlProtocolDidFinishLoading(self)
+        }
+
+        override func stopLoading() {}
+    }
+
+    private func stubbedImporter(responsesByHost: [String: (status: Int, html: String)]) -> EventLinkImporter {
+        HostRoutingURLProtocolStub.responsesByHost = responsesByHost
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [HostRoutingURLProtocolStub.self]
+        return EventLinkImporter(session: URLSession(configuration: configuration))
+    }
+
     func testParsesHeroinesEventPage() throws {
         let html = """
         <html><body>
@@ -138,6 +172,100 @@ final class EventLinkImporterTests: XCTestCase {
         XCTAssertNil(details.venue)
         XCTAssertNil(details.startTime)
         XCTAssertTrue(details.performers.isEmpty)
+    }
+
+    func testGenericPipelineParsesUnsupportedWebsite() async throws {
+        let link = try XCTUnwrap(URL(string: "https://tickets.example.jp/event/55"))
+        let importer = stubbedImporter(responsesByHost: [
+            "tickets.example.jp": (200, """
+            <html><body><div>『秋の対バンライブ』<br>
+            日程：2026年10月10日(土)<br>
+            会場：Zepp Namba<br>
+            OPEN 16:00 / START 17:00<br>
+            料金：一般 ¥4,500 / 学生 ¥2,500</div></body></html>
+            """)
+        ])
+
+        let imported = try await importer.importDetails(from: [link])
+        let details = try XCTUnwrap(imported)
+
+        XCTAssertEqual(details.title, "秋の対バンライブ")
+        XCTAssertEqual(details.venue, "Zepp Namba")
+        XCTAssertEqual(details.ticketOptions.map(\.price), [4500, 2500])
+        XCTAssertNotNil(details.date)
+        XCTAssertEqual(details.linkedURL, link)
+    }
+
+    func testPrefersSiteSpecificParserOverGenericFallback() async throws {
+        let genericLink = try XCTUnwrap(URL(string: "https://tickets.example.jp/event/55"))
+        let heroinesLink = try XCTUnwrap(URL(string: "https://heroines.jp/news/event"))
+        let importer = stubbedImporter(responsesByHost: [
+            "tickets.example.jp": (200, "<html><body>2026年1月1日</body></html>"),
+            "heroines.jp": (200, """
+            <div>【公演概要】<br>
+            2026年5月20日(水)<br>
+            「HEROINES LEAGUEⅠ」<br>
+            @ Kanadevia Hall<br>
+            OPEN 13:30 / START 14:30<br>
+            Sチケット ￥9,000</div>
+            """)
+        ])
+
+        let imported = try await importer.importDetails(from: [genericLink, heroinesLink])
+        let details = try XCTUnwrap(imported)
+
+        // The heroines.jp parser ran, keeping its established output shape.
+        XCTAssertEqual(details.linkedURL, heroinesLink)
+        XCTAssertEqual(details.title, "「HEROINES LEAGUEⅠ」")
+        XCTAssertEqual(details.venue, "Kanadevia Hall")
+    }
+
+    func testHeroinesNonEventPageFallsBackToGenericParsing() async throws {
+        let link = try XCTUnwrap(URL(string: "https://heroines.jp/special/collab"))
+        let importer = stubbedImporter(responsesByHost: [
+            "heroines.jp": (200, """
+            <html><head><script type="application/ld+json">
+            {"@type":"Event","name":"コラボイベント","startDate":"2026-11-03",
+             "location":{"@type":"Place","name":"渋谷ストリーム"}}
+            </script></head><body><p>コラボ開催!</p></body></html>
+            """)
+        ])
+
+        let imported = try await importer.importDetails(from: [link])
+        let details = try XCTUnwrap(imported)
+
+        XCTAssertEqual(details.title, "コラボイベント")
+        XCTAssertEqual(details.venue, "渋谷ストリーム")
+        XCTAssertNotNil(details.date)
+    }
+
+    func testFailedFetchKeepsLinkForPartialImport() async throws {
+        let link = try XCTUnwrap(URL(string: "https://gone.example.jp/event"))
+        let importer = stubbedImporter(responsesByHost: [:])
+
+        let imported = try await importer.importDetails(from: [link])
+        let details = try XCTUnwrap(imported)
+
+        XCTAssertEqual(details.linkedURL, link)
+        XCTAssertNil(details.title)
+        XCTAssertNil(details.date)
+        XCTAssertTrue(details.ticketOptions.isEmpty)
+    }
+
+    func testEventDetailsRoundTripsEndDateAndImageURL() throws {
+        let details = EventImportDetails(
+            title: "多日程フェス",
+            date: Date(timeIntervalSince1970: 1_800_000_000),
+            endDate: Date(timeIntervalSince1970: 1_800_172_800),
+            imageURL: try XCTUnwrap(URL(string: "https://example.com/cover.jpg")),
+            linkedURL: try XCTUnwrap(URL(string: "https://example.com/event"))
+        )
+
+        let decoded = try JSONDecoder().decode(EventImportDetails.self, from: JSONEncoder().encode(details))
+
+        XCTAssertEqual(decoded, details)
+        XCTAssertEqual(decoded.endDate, details.endDate)
+        XCTAssertEqual(decoded.imageURL, details.imageURL)
     }
 
     func testEventDetailsDecodesPayloadsCreatedBeforeTicketOptions() throws {
