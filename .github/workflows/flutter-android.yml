@@ -1,0 +1,103 @@
+name: Flutter Android
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "OshiLifeAndroid/**"
+      - "Shared/Resources/Localizable.xcstrings"
+      - ".github/workflows/flutter-android.yml"
+  pull_request:
+    paths:
+      - "OshiLifeAndroid/**"
+      - "Shared/Resources/Localizable.xcstrings"
+      - ".github/workflows/flutter-android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flutter-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.44.8"
+
+jobs:
+  analyze-and-test:
+    name: Analyze and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: OshiLifeAndroid
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify generated files are up to date
+        run: |
+          dart run tool/convert_xcstrings.dart
+          dart run build_runner build --delete-conflicting-outputs
+          git diff --exit-code -- lib
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+  build-apk:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: OshiLifeAndroid
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Debug-signed release build — the sideloadable artifact analogue of
+      # the iOS unsigned-IPA workflow. Real signing lands with the Play
+      # release workflow (plan §10.2).
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OshiLife-Android-APK
+          path: OshiLifeAndroid/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 7
