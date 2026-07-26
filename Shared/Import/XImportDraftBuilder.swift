@@ -1,11 +1,5 @@
 import Foundation
 
-protocol XOEmbedFetching: Sendable {
-    func fetch(postURL: URL) async throws -> XOEmbedMetadata
-}
-
-extension XOEmbedClient: XOEmbedFetching {}
-
 struct XImportDraftBuilder: Sendable {
     private let client: any XOEmbedFetching
     private let eventLinkImporter: any EventLinkImporting

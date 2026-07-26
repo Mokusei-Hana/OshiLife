@@ -50,7 +50,11 @@ enum XOEmbedError: LocalizedError {
     }
 }
 
-struct XOEmbedClient: Sendable {
+protocol XOEmbedFetching: Sendable {
+    func fetch(postURL: URL) async throws -> XOEmbedMetadata
+}
+
+struct XOEmbedClient: XOEmbedFetching, Sendable {
     static let maximumResponseBytes = 512 * 1_024
     private let session: URLSession
 
