@@ -15,3 +15,8 @@ build/
 xcuserdata/
 Config/Local.xcconfig
 TASK_*.md
+# Codex local instructions
+AGENTS.md
+docs/DEBUGGING.md
+docs/ARCHITECTURE.md
+docs/DESIGN.md

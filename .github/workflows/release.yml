@@ -1,0 +1,177 @@
+name: Release
+
+# Triggers on version tags (e.g. v1.1.0, v1.1.0-rc1).
+# Builds both the unsigned iOS IPA and the Android release APK, then
+# creates a GitHub Release and attaches both artifacts.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag name to release (e.g. v1.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write  # required to create the GitHub Release and upload assets
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false  # never cancel a running release
+
+env:
+  FLUTTER_VERSION: "3.44.8"
+
+jobs:
+  # ── iOS ──────────────────────────────────────────────────────────────────
+  build-ios:
+    name: Build iOS unsigned IPA
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and archive
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project OshiLife.xcodeproj \
+            -scheme OshiLife \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/OshiLife.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM=""
+
+      - name: Package as unsigned IPA
+        run: |
+          mkdir -p Payload
+          cp -r "$RUNNER_TEMP/OshiLife.xcarchive/Products/Applications/OshiLife.app" Payload/
+          zip -r OshiLife.ipa Payload
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OshiLife-iOS-IPA
+          path: OshiLife.ipa
+          if-no-files-found: error
+          retention-days: 7
+
+  # ── Android ──────────────────────────────────────────────────────────────
+  build-android:
+    name: Build Android release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: OshiLifeAndroid
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Debug-signed release build — the sideloadable artifact until
+      # real Play Store signing is configured (plan §10.2 stage 2).
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Rename APK with version
+        run: |
+          VERSION="${{ github.ref_name }}"
+          # workflow_dispatch supplies the tag via input
+          if [ "$VERSION" = "refs/heads/${{ github.ref_name }}" ]; then
+            VERSION="${{ github.event.inputs.tag || 'dev' }}"
+          fi
+          cp build/app/outputs/flutter-apk/app-release.apk \
+             build/app/outputs/flutter-apk/OshiLife-Android-${VERSION}.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OshiLife-Android-APK
+          path: OshiLifeAndroid/build/app/outputs/flutter-apk/OshiLife-Android-*.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  # ── GitHub Release ────────────────────────────────────────────────────────
+  create-release:
+    name: Create GitHub Release
+    needs: [build-ios, build-android]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout (for release notes)
+        uses: actions/checkout@v4
+
+      - name: Download iOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: OshiLife-iOS-IPA
+          path: release-assets/
+
+      - name: Download Android artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: OshiLife-Android-APK
+          path: release-assets/
+
+      - name: List release assets
+        run: ls -lh release-assets/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name || github.event.inputs.tag }}
+          name: "OshiLife ${{ github.ref_name || github.event.inputs.tag }}"
+          body: |
+            ## OshiLife ${{ github.ref_name || github.event.inputs.tag }}
+
+            ### Platforms
+            | Platform | Artifact | Notes |
+            |---|---|---|
+            | iOS | `OshiLife.ipa` (unsigned) | Sideload via Xcode / AltStore. Requires signing with your own certificate. |
+            | Android | `OshiLife-Android-*.apk` (debug-signed) | Enable "Install unknown apps" and sideload. Play Store release pending real signing config. |
+
+            ### iOS — requires Xcode configuration
+            1. Open `OshiLife.xcodeproj` in Xcode 26+.
+            2. Copy `Config/Base.xcconfig` → `Config/Local.xcconfig` and set your bundle ID, App Group, and team.
+            3. Register the App Group in the Apple Developer portal.
+
+            ### Android — sideload
+            1. Download the APK.
+            2. Enable "Install unknown apps" for your browser or file manager.
+            3. Open the APK to install.
+
+            ### Parity status
+            See [docs/PARITY.md](docs/PARITY.md) for the feature × platform matrix.
+
+            ---
+            *Both artifacts are unsigned / debug-signed. Production signing and Play Store / App Store distribution require real credentials (see [FLUTTER_MIGRATION_PLAN.md §10.2](docs/FLUTTER_MIGRATION_PLAN.md)).*
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
+          files: release-assets/*
+          fail_on_unmatched_files: true
