@@ -1,0 +1,64 @@
+name: Build Unsigned IPA
+
+on:
+  push:
+    branches:
+      - main
+      - release/**
+    paths-ignore:
+      - "OshiLifeAndroid/**"
+      - "docs/**"
+  pull_request:
+    branches:
+      - main
+      - release/**
+    paths-ignore:
+      - "OshiLifeAndroid/**"
+      - "docs/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ipa-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and Package IPA
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build and Archive iOS App
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project OshiLife.xcodeproj \
+            -scheme OshiLife \
+            -configuration Release \
+            -archivePath ${{ runner.temp }}/OshiLife.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM=""
+
+      - name: Package as Unsigned IPA
+        run: |
+          mkdir -p Payload
+          cp -r "${{ runner.temp }}/OshiLife.xcarchive/Products/Applications/OshiLife.app" Payload/
+          zip -r OshiLife.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OshiLife-Unsigned-IPA
+          path: OshiLife.ipa
+          if-no-files-found: error
+          retention-days: 7

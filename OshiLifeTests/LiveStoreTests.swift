@@ -30,4 +30,24 @@ final class LiveStoreTests: XCTestCase {
         XCTAssertNil(LiveEvent.validHTTPURL("javascript:alert(1)"))
         XCTAssertNil(LiveEvent.validHTTPURL("not a url"))
     }
+
+    func testPersistsVenueCoordinates() throws {
+        let container = try ModelContainerFactory.makeInMemory()
+        let store = LiveStore(container: container)
+        let event = LiveEvent(
+            artistName: "A",
+            title: "Coordinate",
+            eventDate: .now,
+            venue: "Venue",
+            address: "Address",
+            latitude: 35.0,
+            longitude: 139.0
+        )
+
+        try store.insert(event)
+        let fetched = try XCTUnwrap(store.event(id: event.id))
+
+        XCTAssertEqual(fetched.latitude, 35.0)
+        XCTAssertEqual(fetched.longitude, 139.0)
+    }
 }

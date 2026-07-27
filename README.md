@@ -2,6 +2,15 @@
 
 OshiLife is an iOS 26+ SwiftUI and SwiftData app for keeping a personal diary of idol live events. It includes an X Share Extension that stages editable imports through an App Group without using the X API or page scraping.
 
+## Platforms
+
+| Platform | App | Docs |
+|---|---|---|
+| iOS (reference implementation) | SwiftUI + SwiftData app — `OshiLife/`, `Shared/`, `ShareExtension/` | this README |
+| Android | Flutter companion app — `OshiLifeAndroid/` | [`OshiLifeAndroid/README.md`](OshiLifeAndroid/README.md) |
+
+The two apps are maintained separately with feature parity as the ongoing goal. Parity status is tracked in [`docs/PARITY.md`](docs/PARITY.md); Android scope and architecture live in [`docs/FLUTTER_MIGRATION_PLAN.md`](docs/FLUTTER_MIGRATION_PLAN.md). The sections below cover the iOS app.
+
 ## Before building
 
 1. Open `OshiLife.xcodeproj` in Xcode 26 or later.

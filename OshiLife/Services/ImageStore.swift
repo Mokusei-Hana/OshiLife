@@ -15,7 +15,7 @@ enum ImageStoreError: LocalizedError {
     }
 }
 
-struct ImageStore: Sendable {
+struct ImageStore {
     private let rootURL: URL
     private let fileManager: FileManager
 

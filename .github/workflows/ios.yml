@@ -1,0 +1,81 @@
+name: iOS Build and Tests
+
+on:
+  push:
+    branches:
+      - main
+      - release/**
+    paths-ignore:
+      - "OshiLifeAndroid/**"
+      - "docs/**"
+  pull_request:
+    paths-ignore:
+      - "OshiLifeAndroid/**"
+      - "docs/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Simulator build and tests
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      SIMULATOR_DESTINATION: platform=iOS Simulator,name=iPhone 17,OS=latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show build environment
+        run: |
+          xcodebuild -version
+          xcrun simctl list devices available
+          xcodebuild -project OshiLife.xcodeproj -scheme OshiLife -list
+
+      - name: Build for simulator testing
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project OshiLife.xcodeproj \
+            -scheme OshiLife \
+            -configuration Debug \
+            -destination "$SIMULATOR_DESTINATION" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -resultBundlePath "$RUNNER_TEMP/Build.xcresult" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM=""
+
+      - name: Run simulator tests
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -project OshiLife.xcodeproj \
+            -scheme OshiLife \
+            -configuration Debug \
+            -destination "$SIMULATOR_DESTINATION" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -resultBundlePath "$RUNNER_TEMP/Tests.xcresult" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM=""
+
+      - name: Upload Xcode result bundles
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcode-results
+          path: |
+            ${{ runner.temp }}/Build.xcresult
+            ${{ runner.temp }}/Tests.xcresult
+          if-no-files-found: warn
+          retention-days: 7

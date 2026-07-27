@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 import XCTest
 @testable import OshiLife
 
@@ -33,6 +36,21 @@ final class XOEmbedClientTests: XCTestCase {
 
     func testMissingParagraphIsRecoverable() {
         XCTAssertNil(XOEmbedClient.postText(from: "<blockquote>No paragraph</blockquote>"))
+    }
+
+    func testExtractsAndDeduplicatesLinkTargets() {
+        let html = #"""
+        <p>
+          <a href="https://heroines.jp/news/event?a=1&amp;b=2">詳細</a>
+          <a href="https://heroines.jp/news/event?a=1&amp;b=2">同じ詳細</a>
+          <a href="mailto:info@example.com">メール</a>
+        </p>
+        """#
+
+        XCTAssertEqual(
+            XOEmbedClient.linkedURLs(from: html).map(\.absoluteString),
+            ["https://heroines.jp/news/event?a=1&b=2"]
+        )
     }
 
     func testFetchDecodesMetadata() async throws {

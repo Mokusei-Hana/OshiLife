@@ -1,6 +1,22 @@
 .DS_Store
 DerivedData/
 build/
+*.xcresult
+*.ipa
+*.dSYM
+*.dSYM.zip
+*.mobileprovision
+*.provisionprofile
+*.cer
+*.p12
+*.key
+*.pem
 *.xcuserstate
 xcuserdata/
 Config/Local.xcconfig
+TASK_*.md
+# Codex local instructions
+AGENTS.md
+docs/DEBUGGING.md
+docs/ARCHITECTURE.md
+docs/DESIGN.md

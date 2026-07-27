@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 13+ per-app language settings (plan §7.3); mirrors the
+     in-app language options (system / 日本語 / 简体中文). -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="ja"/>
+    <locale android:name="zh"/>
+</locale-config>
