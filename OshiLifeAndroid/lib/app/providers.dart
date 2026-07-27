@@ -31,6 +31,12 @@ final databaseProvider = Provider<OshiLifeDatabase>((ref) {
   return database;
 });
 
+/// Raw description of the failure that forced the in-memory fallback at
+/// startup — the iOS `startupWarning`. Null while persistence is healthy;
+/// `main()` overrides it after probing the store. The home screen renders
+/// it through the localized `error.persistence_fallback`.
+final startupPersistenceErrorProvider = Provider<String?>((ref) => null);
+
 final liveStoreProvider = Provider<LiveStore>(
   (ref) => LiveStore(ref.watch(databaseProvider)),
 );

@@ -4,9 +4,15 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "OshiLifeAndroid/**"
+      - "docs/**"
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - "OshiLifeAndroid/**"
+      - "docs/**"
   workflow_dispatch:
 
 permissions:

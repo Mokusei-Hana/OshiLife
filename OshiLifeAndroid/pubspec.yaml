@@ -4,7 +4,9 @@ publish_to: "none"
 
 # Keep the marketing version (before +) aligned with the iOS
 # MARKETING_VERSION by convention; the build number is independent.
-version: 0.1.0+1
+# 1.1.0 targets the v1.1 release (iOS Base.xcconfig moves to 1.1 in the
+# coordinated release PR).
+version: 1.1.0+1
 
 environment:
   sdk: ^3.12.2

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -241,46 +242,51 @@ class DetailScreen extends ConsumerWidget {
     AppLocalizations l10n,
   ) {
     final theme = Theme.of(context);
-    return Material(
-      color: ThemeSystem.locationColor.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(DesignRadius.medium),
-      child: InkWell(
+    return Semantics(
+      identifier: 'venueMapButton',
+      button: true,
+      hint: l10n.detailOpenMaps,
+      child: Material(
+        color: ThemeSystem.locationColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(DesignRadius.medium),
-        onTap: () => _showMapSheet(context, event, l10n),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.location_on,
-                color: ThemeSystem.locationColor,
-                size: 20,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      event.venue.isNotEmpty ? event.venue : event.address,
-                      style: theme.textTheme.titleSmall,
-                    ),
-                    if (event.venue.isNotEmpty && event.address.isNotEmpty)
-                      Text(
-                        event.address,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                  ],
+        child: InkWell(
+          borderRadius: BorderRadius.circular(DesignRadius.medium),
+          onTap: () => _showMapSheet(context, event, l10n),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 44),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.location_on,
+                  color: ThemeSystem.locationColor,
+                  size: 20,
                 ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        event.venue.isNotEmpty ? event.venue : event.address,
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      if (event.venue.isNotEmpty && event.address.isNotEmpty)
+                        Text(
+                          event.address,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -302,39 +308,46 @@ class DetailScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                l10n.detailOpenMaps,
+                query,
                 style: Theme.of(sheetContext).textTheme.titleSmall,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             ListTile(
               leading: const Icon(Icons.map_outlined),
               title: Text(l10n.mapGoogle),
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                _openMap(
-                  context,
-                  MapService.googleMapsUri(
-                    venue: query,
-                    latitude: event.latitude,
-                    longitude: event.longitude,
-                  ),
-                );
-              },
+              onTap: () => _openFromSheet(
+                context,
+                sheetContext,
+                l10n,
+                () => MapService.googleMapsUri(
+                  venue: query,
+                  latitude: event.latitude,
+                  longitude: event.longitude,
+                ),
+              ),
             ),
+            // The generic geo: chooser replaces iOS's Apple Maps option
+            // (plan §7.4); `map.apple` stays iOS-only.
             ListTile(
               leading: const Icon(Icons.location_on_outlined),
               title: Text(l10n.detailOpenMaps),
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                _openMap(
-                  context,
-                  MapService.geoUri(
-                    venue: query,
-                    latitude: event.latitude,
-                    longitude: event.longitude,
-                  ),
-                );
-              },
+              onTap: () => _openFromSheet(
+                context,
+                sheetContext,
+                l10n,
+                () => MapService.geoUri(
+                  venue: query,
+                  latitude: event.latitude,
+                  longitude: event.longitude,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: Text(l10n.commonCancel),
+              onTap: () => Navigator.of(sheetContext).pop(),
             ),
           ],
         ),
@@ -342,8 +355,63 @@ class DetailScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _openMap(BuildContext context, Uri uri) async {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  /// iOS wraps `MapService.open` in do/catch and alerts on failure
+  /// (`LiveDetailView`); same contract here for both the URI construction
+  /// and the launch itself.
+  void _openFromSheet(
+    BuildContext context,
+    BuildContext sheetContext,
+    AppLocalizations l10n,
+    Uri Function() buildUri,
+  ) {
+    Navigator.of(sheetContext).pop();
+    final Uri uri;
+    try {
+      uri = buildUri();
+    } on MapServiceException catch (error) {
+      _showMapError(context, l10n, switch (error.kind) {
+        MapServiceErrorKind.emptyVenue => l10n.errorMapEmpty,
+        MapServiceErrorKind.missingCoordinates => l10n.errorMapCoordinates,
+      });
+      return;
+    }
+    _openMap(context, l10n, uri);
+  }
+
+  Future<void> _openMap(
+    BuildContext context,
+    AppLocalizations l10n,
+    Uri uri,
+  ) async {
+    var launched = false;
+    try {
+      launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } on PlatformException {
+      launched = false;
+    }
+    if (!launched && context.mounted) {
+      _showMapError(context, l10n, l10n.errorMapUrl);
+    }
+  }
+
+  void _showMapError(
+    BuildContext context,
+    AppLocalizations l10n,
+    String message,
+  ) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.commonError),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.commonOk),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _tickets(
