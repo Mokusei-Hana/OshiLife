@@ -35,6 +35,25 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history needed for commit-count build number
+
+      - name: Derive version
+        id: version
+        run: |
+          # On a tag event use the tag; on a branch event use the xcconfig value.
+          RAW_TAG="${{ github.ref_name }}"
+          if git describe --exact-match --tags HEAD 2>/dev/null; then
+            TAG="$(git describe --exact-match --tags HEAD)"
+            MARKETING="${TAG#v}"
+          else
+            # Read the fallback from Base.xcconfig
+            MARKETING="$(grep '^MARKETING_VERSION' Config/Base.xcconfig | cut -d' ' -f3)"
+          fi
+          BUILD_NUM="$(git rev-list --count HEAD)"
+          echo "marketing=${MARKETING}" >> "$GITHUB_OUTPUT"
+          echo "build=${BUILD_NUM}"      >> "$GITHUB_OUTPUT"
+          echo "iOS version: ${MARKETING} (build ${BUILD_NUM})"
 
       - name: Build and Archive iOS App
         run: |
@@ -47,7 +66,9 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            DEVELOPMENT_TEAM=""
+            DEVELOPMENT_TEAM="" \
+            MARKETING_VERSION="${{ steps.version.outputs.marketing }}" \
+            CURRENT_PROJECT_VERSION="${{ steps.version.outputs.build }}"
 
       - name: Package as Unsigned IPA
         run: |
