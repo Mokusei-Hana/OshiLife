@@ -63,19 +63,21 @@ final class LiveEditorViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.venue, "Spotify O-EAST")
         XCTAssertTrue(viewModel.hasOpenTime)
         XCTAssertTrue(viewModel.hasStartTime)
-        XCTAssertEqual(viewModel.performersText, "iLiFE! / のんふぃく！")
-        XCTAssertEqual(viewModel.performers, ["iLiFE!", "のんふぃく！"])
+        XCTAssertTrue(viewModel.performers.isEmpty)
+        XCTAssertEqual(viewModel.performerSuggestions, ["iLiFE!", "のんふぃく！"])
         XCTAssertEqual(viewModel.ticketOptions.count, 2)
         XCTAssertEqual(viewModel.ticketURLString, eventURL.absoluteString)
         XCTAssertEqual(viewModel.sourceURLString, sourceURL.absoluteString)
         XCTAssertTrue(viewModel.notes.contains("一般チケット ¥3,500"))
 
         viewModel.title = "編集したタイトル"
+        viewModel.addPerformer("iLiFE!")
         viewModel.selectedTicketID = viewModel.ticketOptions[0].id
         let saved = viewModel.save(imageStore: ImageStore(rootURL: FileManager.default.temporaryDirectory))
         XCTAssertEqual(saved?.selectedTicketID, viewModel.ticketOptions[0].id)
         XCTAssertEqual(saved?.selectedTicketName, "Sチケット")
         XCTAssertEqual(saved?.ticketOptions.count, 2)
+        XCTAssertEqual(saved?.performers, ["iLiFE!"])
         XCTAssertEqual(viewModel.title, "編集したタイトル")
     }
 
@@ -109,6 +111,51 @@ final class LiveEditorViewModelTests: XCTestCase {
         let viewModel = LiveEditorViewModel(store: store)
 
         XCTAssertEqual(viewModel.performerSuggestions, ["TENRIN", "iLiFE!"])
+    }
+
+    func testCollapsedPerformerSuggestionsAlwaysIncludeSelections() {
+        let names = (1...12).map { "Performer \($0)" }
+        let selected = Set(["Performer 10", "Performer 12"])
+
+        let collapsed = PerformerCatalog.collapsedNames(
+            from: names,
+            selected: selected,
+            limit: 8
+        )
+
+        XCTAssertEqual(collapsed.count, 8)
+        XCTAssertTrue(selected.isSubset(of: Set(collapsed)))
+    }
+
+    func testCollapsedPerformerSuggestionsDoNotHideSelectionsBeyondLimit() {
+        let names = (1...12).map { "Performer \($0)" }
+        let selected = Set(names.suffix(10))
+
+        let collapsed = PerformerCatalog.collapsedNames(
+            from: names,
+            selected: selected,
+            limit: 8
+        )
+
+        XCTAssertEqual(Set(collapsed), selected)
+    }
+
+    func testExistingEventKeepsPreviouslySavedPerformerSelections() throws {
+        let store = LiveStore(container: try ModelContainerFactory.makeInMemory())
+        let event = LiveEvent(
+            artistName: "推し",
+            title: "ライブ",
+            eventDate: .now,
+            performers: ["TENRIN", "iLiFE!"]
+        )
+
+        let viewModel = LiveEditorViewModel(store: store, event: event)
+
+        XCTAssertEqual(viewModel.performers, ["TENRIN", "iLiFE!"])
+        XCTAssertEqual(
+            Array(viewModel.performerSuggestions.prefix(2)),
+            ["TENRIN", "iLiFE!"]
+        )
     }
 
     func testVenueSelectionSavesResolvedLocation() throws {

@@ -22,29 +22,26 @@ struct HomeDashboardView: View {
         let upcoming = LiveListViewModel.upcomingEvents(in: events, now: now)
         let history = LiveListViewModel.historicalEvents(in: events)
 
-        return ScrollView {
-            LazyVStack(alignment: .leading, spacing: 28) {
-                VStack(alignment: .leading, spacing: 16) {
-                    sectionTitle("home.upcoming", systemImage: "calendar.badge.clock")
-                    if upcoming.isEmpty {
-                        ContentUnavailableView("home.no_upcoming", systemImage: "calendar")
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 180)
-                    } else {
-                        upcomingHero(events: upcoming, now: now)
-                    }
-                }
-
-                if !history.isEmpty {
-                    VStack(alignment: .leading, spacing: 14) {
-                        sectionTitle("home.attended", systemImage: "checkmark.seal")
-                        historicalEvents(history)
-                    }
+        return LazyVStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 16) {
+                sectionTitle("home.upcoming", systemImage: "calendar.badge.clock")
+                if upcoming.isEmpty {
+                    ContentUnavailableView("home.no_upcoming", systemImage: "calendar")
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 180)
+                } else {
+                    upcomingHero(events: upcoming, now: now)
                 }
             }
-            .padding(.vertical, 18)
+
+            if !history.isEmpty {
+                VStack(alignment: .leading, spacing: 14) {
+                    sectionTitle("home.attended", systemImage: "checkmark.seal")
+                    historicalEvents(history)
+                }
+            }
         }
-        .scrollIndicators(.hidden)
+        .padding(.vertical, 18)
         .animation(.snappy, value: events.map(\.id))
     }
 

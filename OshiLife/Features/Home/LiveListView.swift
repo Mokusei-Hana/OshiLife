@@ -120,23 +120,11 @@ struct LiveListView: View {
                 if viewModel.isLoading && viewModel.events.isEmpty {
                     ProgressView("common.loading")
                 } else if viewModel.filteredEvents.isEmpty {
-                    ContentUnavailableView {
-                        Label("list.empty.title", systemImage: "sparkles.rectangle.stack")
-                    } description: {
-                        Text("list.empty.message")
-                    } actions: {
-                        addMenu
-                            .buttonStyle(.glassProminent)
-                    }
+                    emptyContent(viewModel: viewModel)
                 } else {
-                    eventContent(viewModel.filteredEvents)
+                    eventContent(viewModel.filteredEvents, viewModel: viewModel)
                         .id(settings.homeDisplayStyle)
                         .refreshable { viewModel.load() }
-                }
-            }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                if !viewModel.availablePerformers.isEmpty {
-                    performerFilter(viewModel: viewModel)
                 }
             }
             .navigationTitle("app.name")
@@ -156,6 +144,28 @@ struct LiveListView: View {
                 SettingsView(settings: settings)
             }
         }
+    }
+
+    private func emptyContent(viewModel: LiveListViewModel) -> some View {
+        ScrollView {
+            VStack(spacing: 12) {
+                if !viewModel.availablePerformers.isEmpty {
+                    performerFilter(viewModel: viewModel)
+                }
+
+                ContentUnavailableView {
+                    Label("list.empty.title", systemImage: "sparkles.rectangle.stack")
+                } description: {
+                    Text("list.empty.message")
+                } actions: {
+                    addMenu
+                        .buttonStyle(.glassProminent)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 40)
+            }
+        }
+        .refreshable { viewModel.load() }
     }
 
     private func performerFilter(viewModel: LiveListViewModel) -> some View {
@@ -276,41 +286,56 @@ struct LiveListView: View {
     }
 
     @ViewBuilder
-    private func eventContent(_ events: [LiveEvent]) -> some View {
+    private func eventContent(_ events: [LiveEvent], viewModel: LiveListViewModel) -> some View {
         switch settings.homeDisplayStyle {
         case .card:
-            HomeDashboardView(
-                events: events,
-                imageStore: imageStore,
-                focusedEventID: $focusedEventID,
-                onOpen: { path.append($0.id) },
-                onEdit: { editorRoute = EditorRoute(event: $0) }
-            )
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    if !viewModel.availablePerformers.isEmpty {
+                        performerFilter(viewModel: viewModel)
+                    }
+
+                    HomeDashboardView(
+                        events: events,
+                        imageStore: imageStore,
+                        focusedEventID: $focusedEventID,
+                        onOpen: { path.append($0.id) },
+                        onEdit: { editorRoute = EditorRoute(event: $0) }
+                    )
+                }
+            }
+            .scrollIndicators(.hidden)
         case .list:
-            eventList(events)
+            eventList(events, viewModel: viewModel)
         }
     }
 
-    private func eventList(_ events: [LiveEvent]) -> some View {
+    private func eventList(_ events: [LiveEvent], viewModel: LiveListViewModel) -> some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             ScrollView {
-                LazyVStack(spacing: 10) {
-                    ForEach(events) { event in
-                        EventLinkButton(
-                            event: event,
-                            onOpen: { path.append($0.id) },
-                            onEdit: { editorRoute = EditorRoute(event: $0) }
-                        ) {
-                            LiveListRowView(
+                LazyVStack(spacing: 0) {
+                    if !viewModel.availablePerformers.isEmpty {
+                        performerFilter(viewModel: viewModel)
+                    }
+
+                    LazyVStack(spacing: 10) {
+                        ForEach(events) { event in
+                            EventLinkButton(
                                 event: event,
-                                imageStore: imageStore,
-                                now: context.date
-                            )
+                                onOpen: { path.append($0.id) },
+                                onEdit: { editorRoute = EditorRoute(event: $0) }
+                            ) {
+                                LiveListRowView(
+                                    event: event,
+                                    imageStore: imageStore,
+                                    now: context.date
+                                )
+                            }
                         }
                     }
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 14)
                 }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 14)
             }
         }
         .animation(.snappy, value: settings.homeDisplayStyle)

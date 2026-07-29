@@ -17,4 +17,19 @@ enum PerformerCatalog {
             return lhs.localizedStandardCompare(rhs) == .orderedAscending
         }
     }
+
+    static func collapsedNames(
+        from names: [String],
+        selected: Set<String>,
+        limit: Int
+    ) -> [String] {
+        guard limit > 0 else {
+            return names.filter(selected.contains)
+        }
+
+        let selectedNames = names.filter(selected.contains)
+        let remainingCount = max(0, limit - selectedNames.count)
+        let unselectedNames = names.filter { !selected.contains($0) }
+        return selectedNames + unselectedNames.prefix(remainingCount)
+    }
 }

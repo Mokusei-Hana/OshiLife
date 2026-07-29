@@ -19,7 +19,8 @@ final class LiveEditorViewModel {
     var hasStartTime: Bool
     var startTime: Date
     var performers: [String]
-    let performerSuggestions: [String]
+    private var importedPerformerSuggestions: [String]
+    private let savedPerformerSuggestions: [String]
     var ticketOptions: [TicketOption]
     var selectedTicketID: UUID?
     var venue: String
@@ -47,6 +48,10 @@ final class LiveEditorViewModel {
         existingEvent = event
         self.pendingImport = pendingImport
         let importedDetails = pendingImport?.eventDetails
+        let importedPerformers = Self.normalizedPerformers(
+            (importedDetails?.performers ?? [])
+                + (importedDetails?.scheduleOptions.flatMap(\.performers) ?? [])
+        )
         scheduleOptions = importedDetails?.scheduleOptions ?? []
         artistName = event?.artistName
             ?? (importedDetails?.performers.isEmpty == false ? importedDetails?.performers.joined(separator: " / ") : nil)
@@ -58,10 +63,9 @@ final class LiveEditorViewModel {
         openTime = event?.openTime ?? importedDetails?.openTime ?? .now
         hasStartTime = event?.startTime != nil || importedDetails?.startTime != nil
         startTime = event?.startTime ?? importedDetails?.startTime ?? .now
-        performers = Self.normalizedPerformers(
-            event?.performers ?? importedDetails?.performers ?? []
-        )
-        performerSuggestions = PerformerCatalog.namesByUsage(in: (try? store.fetchAll()) ?? [])
+        performers = Self.normalizedPerformers(event?.performers ?? [])
+        importedPerformerSuggestions = event == nil ? importedPerformers : []
+        savedPerformerSuggestions = PerformerCatalog.namesByUsage(in: (try? store.fetchAll()) ?? [])
         ticketOptions = event?.ticketOptions ?? importedDetails?.ticketOptions ?? []
         selectedTicketID = event?.selectedTicketID
         venue = event?.venue ?? importedDetails?.venue ?? ""
@@ -78,6 +82,11 @@ final class LiveEditorViewModel {
 
     var isEditing: Bool { existingEvent != nil }
     var existingCoverPath: String? { existingEvent?.coverImagePath }
+    var performerSuggestions: [String] {
+        Self.normalizedPerformers(
+            performers + importedPerformerSuggestions + savedPerformerSuggestions
+        )
+    }
     var performersText: String {
         get { performers.joined(separator: " / ") }
         set {
@@ -153,8 +162,7 @@ final class LiveEditorViewModel {
             hasStartTime = true
         }
         if !option.performers.isEmpty {
-            performers = Self.normalizedPerformers(option.performers)
-            artistName = performers.joined(separator: " / ")
+            artistName = Self.normalizedPerformers(option.performers).joined(separator: " / ")
         }
     }
 
@@ -213,8 +221,12 @@ final class LiveEditorViewModel {
             if ticketOptions.isEmpty {
                 ticketOptions = draft.eventDetails?.ticketOptions ?? []
             }
-            if performers.isEmpty {
-                performers = Self.normalizedPerformers(draft.eventDetails?.performers ?? [])
+            if let imported = draft.eventDetails {
+                importedPerformerSuggestions = Self.normalizedPerformers(
+                    importedPerformerSuggestions
+                        + imported.performers
+                        + imported.scheduleOptions.flatMap(\.performers)
+                )
             }
             if coverImageData == nil {
                 coverImageData = draft.imageData

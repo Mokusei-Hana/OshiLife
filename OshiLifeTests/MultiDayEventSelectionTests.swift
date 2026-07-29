@@ -125,7 +125,8 @@ final class MultiDayEventSelectionTests: XCTestCase {
         XCTAssertTrue(viewModel.hasStartTime)
         try assertHour(viewModel.startTime, 10)
         try assertMinute(viewModel.startTime, 0)
-        XCTAssertEqual(viewModel.performersText, "アキシブproject")
+        XCTAssertTrue(viewModel.performers.isEmpty)
+        XCTAssertTrue(viewModel.performerSuggestions.contains("アキシブproject"))
     }
 
     // MARK: - 4. Selecting DAY2 updates event date/time
@@ -162,7 +163,8 @@ final class MultiDayEventSelectionTests: XCTestCase {
         XCTAssertTrue(viewModel.hasStartTime)
         try assertHour(viewModel.startTime, 11)
         try assertMinute(viewModel.startTime, 0)
-        XCTAssertEqual(viewModel.performersText, "iON! / TENRIN")
+        XCTAssertTrue(viewModel.performers.isEmpty)
+        XCTAssertTrue(Set(["iON!", "TENRIN"]).isSubset(of: Set(viewModel.performerSuggestions)))
     }
 
     // MARK: - 5. Selecting DAY3 updates event date/time
@@ -200,7 +202,8 @@ final class MultiDayEventSelectionTests: XCTestCase {
         XCTAssertTrue(viewModel.hasStartTime)
         try assertHour(viewModel.startTime, 10)
         try assertMinute(viewModel.startTime, 30)
-        XCTAssertEqual(viewModel.performersText, "Mirror,Mirror")
+        XCTAssertTrue(viewModel.performers.isEmpty)
+        XCTAssertTrue(viewModel.performerSuggestions.contains("Mirror,Mirror"))
     }
 
     // MARK: - 6. Existing imported events remain compatible
