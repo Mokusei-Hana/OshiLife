@@ -73,17 +73,22 @@ final class LiveEditorViewModel {
         } else {
             groupedEvents = [event].compactMap { $0 }
         }
-        scheduleEvents = groupedEvents.reduce(into: [:]) { result, groupedEvent in
+        let resolvedScheduleEvents = groupedEvents.reduce(into: [UUID: LiveEvent]()) { result, groupedEvent in
             guard let optionID = groupedEvent.scheduleOptionID else { return }
             result[optionID] = groupedEvent
         }
-        selectedScheduleOptionIDs = Set(scheduleEvents.keys)
+        scheduleEvents = resolvedScheduleEvents
+
+        var resolvedSelectedScheduleOptionIDs = Set(resolvedScheduleEvents.keys)
         if event == nil, let firstScheduleID = resolvedScheduleOptions.first?.id {
-            selectedScheduleOptionIDs.insert(firstScheduleID)
+            resolvedSelectedScheduleOptionIDs.insert(firstScheduleID)
         }
-        activeScheduleOptionID = event?.scheduleOptionID
-            ?? selectedScheduleOptionIDs.first
+        selectedScheduleOptionIDs = resolvedSelectedScheduleOptionIDs
+
+        let resolvedActiveScheduleOptionID = event?.scheduleOptionID
+            ?? resolvedSelectedScheduleOptionIDs.first
             ?? resolvedScheduleOptions.first?.id
+        activeScheduleOptionID = resolvedActiveScheduleOptionID
 
         var resolvedDrafts = Dictionary(
             uniqueKeysWithValues: resolvedScheduleOptions.map { option in
@@ -109,7 +114,7 @@ final class LiveEditorViewModel {
         }
         scheduleDrafts = resolvedDrafts
 
-        let activeDraft = activeScheduleOptionID.flatMap { resolvedDrafts[$0] }
+        let activeDraft = resolvedActiveScheduleOptionID.flatMap { resolvedDrafts[$0] }
         artistName = event?.artistName
             ?? (importedDetails?.performers.isEmpty == false ? importedDetails?.performers.joined(separator: " / ") : nil)
             ?? pendingImport?.authorName
