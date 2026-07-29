@@ -15,7 +15,7 @@ final class LiveEditorViewModel {
     var openTime: Date
     var hasStartTime: Bool
     var startTime: Date
-    var performersText: String
+    var performers: [String]
     var ticketOptions: [TicketOption]
     var selectedTicketID: UUID?
     var venue: String
@@ -53,9 +53,9 @@ final class LiveEditorViewModel {
         openTime = event?.openTime ?? importedDetails?.openTime ?? .now
         hasStartTime = event?.startTime != nil || importedDetails?.startTime != nil
         startTime = event?.startTime ?? importedDetails?.startTime ?? .now
-        performersText = event?.performers.joined(separator: " / ")
-            ?? importedDetails?.performers.joined(separator: " / ")
-            ?? ""
+        performers = Self.normalizedPerformers(
+            event?.performers ?? importedDetails?.performers ?? []
+        )
         ticketOptions = event?.ticketOptions ?? importedDetails?.ticketOptions ?? []
         selectedTicketID = event?.selectedTicketID
         venue = event?.venue ?? importedDetails?.venue ?? ""
@@ -72,6 +72,14 @@ final class LiveEditorViewModel {
 
     var isEditing: Bool { existingEvent != nil }
     var existingCoverPath: String? { existingEvent?.coverImagePath }
+    var performersText: String {
+        get { performers.joined(separator: " / ") }
+        set {
+            performers = Self.normalizedPerformers(
+                newValue.split(whereSeparator: { $0 == "/" || $0 == "／" }).map(String.init)
+            )
+        }
+    }
     var validationMessages: [String] {
         var messages: [String] = []
         if artistName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -108,6 +116,20 @@ final class LiveEditorViewModel {
         address = ""
         latitude = nil
         longitude = nil
+    }
+
+    @discardableResult
+    func addPerformer(_ name: String) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              !performers.contains(where: { $0.localizedCaseInsensitiveCompare(trimmed) == .orderedSame })
+        else { return false }
+        performers.append(trimmed)
+        return true
+    }
+
+    func removePerformer(_ performer: String) {
+        performers.removeAll { $0 == performer }
     }
 
     @discardableResult
@@ -165,8 +187,8 @@ final class LiveEditorViewModel {
             if ticketOptions.isEmpty {
                 ticketOptions = draft.eventDetails?.ticketOptions ?? []
             }
-            if performersText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                performersText = draft.eventDetails?.performers.joined(separator: " / ") ?? ""
+            if performers.isEmpty {
+                performers = Self.normalizedPerformers(draft.eventDetails?.performers ?? [])
             }
             if coverImageData == nil {
                 coverImageData = draft.imageData
@@ -232,10 +254,7 @@ final class LiveEditorViewModel {
             event.eventDate = eventDate
             event.openTime = hasOpenTime ? openTime : nil
             event.startTime = hasStartTime ? startTime : nil
-            event.performers = performersText
-                .split(whereSeparator: { $0 == "/" || $0 == "／" || $0 == "、" || $0 == "," })
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
+            event.performers = performers
             event.venue = venue.trimmingCharacters(in: .whitespacesAndNewlines)
             event.address = address.trimmingCharacters(in: .whitespacesAndNewlines)
             event.latitude = latitude
@@ -265,6 +284,16 @@ final class LiveEditorViewModel {
             try? imageStore.remove(relativePath: newImagePath)
             errorMessage = error.localizedDescription
             return nil
+        }
+    }
+
+    private static func normalizedPerformers(_ performers: [String]) -> [String] {
+        performers.reduce(into: []) { result, performer in
+            let trimmed = performer.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty,
+                  !result.contains(where: { $0.localizedCaseInsensitiveCompare(trimmed) == .orderedSame })
+            else { return }
+            result.append(trimmed)
         }
     }
 }

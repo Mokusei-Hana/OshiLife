@@ -34,7 +34,8 @@ struct RootView: View {
             liveStore: liveStore,
             imageStore: imageStore,
             pendingStore: pendingStore,
-            startupWarning: startupWarning
+            startupWarning: startupWarning,
+            settings: settings
         )
         .environment(settings)
         .tint(ThemeSystem.palette(

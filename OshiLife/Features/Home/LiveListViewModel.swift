@@ -25,18 +25,46 @@ final class LiveListViewModel {
     }
 
     private let store: LiveStore
+    private let settings: AppSettings
     var events: [LiveEvent] = []
     var filter: StatusFilter = .all
     var errorMessage: String?
     var isLoading = false
 
-    init(store: LiveStore) {
+    init(store: LiveStore, settings: AppSettings) {
         self.store = store
+        self.settings = settings
     }
 
     var filteredEvents: [LiveEvent] {
-        guard let status = filter.status else { return events }
-        return events.filter { $0.status == status }
+        events.filter { event in
+            let matchesStatus = filter.status.map { event.status == $0 } ?? true
+            let matchesPerformer = settings.selectedPerformerFilters.isEmpty
+                || !Set(event.performers).isDisjoint(with: settings.selectedPerformerFilters)
+            return matchesStatus && matchesPerformer
+        }
+    }
+
+    var availablePerformers: [String] {
+        Set(events.flatMap(\.performers))
+            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+
+    var selectedPerformers: Set<String> {
+        settings.selectedPerformerFilters
+    }
+
+    func togglePerformer(_ performer: String) {
+        if settings.selectedPerformerFilters.contains(performer) {
+            settings.selectedPerformerFilters.remove(performer)
+        } else {
+            settings.selectedPerformerFilters.insert(performer)
+        }
+    }
+
+    func clearPerformerFilter() {
+        settings.selectedPerformerFilters.removeAll()
     }
 
     static func upcomingEvents(in events: [LiveEvent], now: Date) -> [LiveEvent] {
@@ -56,6 +84,8 @@ final class LiveListViewModel {
         defer { isLoading = false }
         do {
             events = try store.fetchAll()
+            let available = Set(availablePerformers)
+            settings.selectedPerformerFilters.formIntersection(available)
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription

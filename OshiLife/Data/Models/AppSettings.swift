@@ -57,6 +57,7 @@ final class AppSettings {
         static let homeDisplayStyle = "settings.homeDisplayStyle"
         static let language = "settings.language"
         static let oshiColor = "settings.oshiColor"
+        static let selectedPerformerFilters = "settings.selectedPerformerFilters"
         static let legacyHomeDisplayStyle = "eventDisplayMode"
     }
 
@@ -90,6 +91,12 @@ final class AppSettings {
         didSet { defaults.set(language.rawValue, forKey: Key.language) }
     }
 
+    var selectedPerformerFilters: Set<String> {
+        didSet {
+            defaults.set(selectedPerformerFilters.sorted(), forKey: Key.selectedPerformerFilters)
+        }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         accentColorMode = AccentColorMode(
@@ -113,6 +120,9 @@ final class AppSettings {
         language = AppLanguage(
             rawValue: defaults.string(forKey: Key.language) ?? ""
         ) ?? .system
+        selectedPerformerFilters = Set(
+            defaults.stringArray(forKey: Key.selectedPerformerFilters) ?? []
+        )
 
         if defaults.object(forKey: Key.homeDisplayStyle) == nil {
             defaults.set(homeDisplayStyle.rawValue, forKey: Key.homeDisplayStyle)

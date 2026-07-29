@@ -25,12 +25,13 @@ struct LiveListView: View {
         liveStore: LiveStore,
         imageStore: ImageStore,
         pendingStore: PendingImportStore?,
-        startupWarning: String?
+        startupWarning: String?,
+        settings: AppSettings
     ) {
         self.liveStore = liveStore
         self.imageStore = imageStore
         self.startupWarning = startupWarning
-        _viewModel = State(initialValue: LiveListViewModel(store: liveStore))
+        _viewModel = State(initialValue: LiveListViewModel(store: liveStore, settings: settings))
         _importCoordinator = State(initialValue: PendingImportCoordinator(pendingStore: pendingStore, liveStore: liveStore))
     }
 
@@ -127,6 +128,11 @@ struct LiveListView: View {
                         .refreshable { viewModel.load() }
                 }
             }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if !viewModel.availablePerformers.isEmpty {
+                    performerFilter(viewModel: viewModel)
+                }
+            }
             .navigationTitle("app.name")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -144,6 +150,63 @@ struct LiveListView: View {
                 SettingsView(settings: settings)
             }
         }
+    }
+
+    private func performerFilter(viewModel: LiveListViewModel) -> some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                filterButton(
+                    label: Text("filter.all"),
+                    isSelected: viewModel.selectedPerformers.isEmpty
+                ) {
+                    viewModel.clearPerformerFilter()
+                }
+
+                ForEach(viewModel.availablePerformers, id: \.self) { performer in
+                    filterButton(
+                        label: Text(verbatim: performer),
+                        isSelected: viewModel.selectedPerformers.contains(performer)
+                    ) {
+                        viewModel.togglePerformer(performer)
+                    }
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 10)
+        }
+        .scrollIndicators(.hidden)
+        .background(.bar)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text("filter.performers"))
+    }
+
+    private func filterButton(
+        label: Text,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.caption.bold())
+                }
+                label
+                    .font(.subheadline.weight(.medium))
+            }
+            .padding(.horizontal, 14)
+            .frame(minHeight: 44)
+            .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
+            .background(
+                isSelected
+                    ? AnyShapeStyle(Color.accentColor.opacity(0.16))
+                    : AnyShapeStyle(Color.secondary.opacity(0.1)),
+                in: Capsule()
+            )
+        }
+        .buttonStyle(.plain)
+        .contentShape(Capsule())
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private func sidebarMenu(

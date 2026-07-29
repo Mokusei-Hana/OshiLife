@@ -64,6 +64,7 @@ final class LiveEditorViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.hasOpenTime)
         XCTAssertTrue(viewModel.hasStartTime)
         XCTAssertEqual(viewModel.performersText, "iLiFE! / のんふぃく！")
+        XCTAssertEqual(viewModel.performers, ["iLiFE!", "のんふぃく！"])
         XCTAssertEqual(viewModel.ticketOptions.count, 2)
         XCTAssertEqual(viewModel.ticketURLString, eventURL.absoluteString)
         XCTAssertEqual(viewModel.sourceURLString, sourceURL.absoluteString)
@@ -76,6 +77,18 @@ final class LiveEditorViewModelTests: XCTestCase {
         XCTAssertEqual(saved?.selectedTicketName, "Sチケット")
         XCTAssertEqual(saved?.ticketOptions.count, 2)
         XCTAssertEqual(viewModel.title, "編集したタイトル")
+    }
+
+    func testPerformerTagsCanBeAddedRemovedAndDeduplicated() throws {
+        let store = LiveStore(container: try ModelContainerFactory.makeInMemory())
+        let viewModel = LiveEditorViewModel(store: store)
+
+        XCTAssertTrue(viewModel.addPerformer(" iLiFE! "))
+        XCTAssertTrue(viewModel.addPerformer("Mirror,Mirror"))
+        XCTAssertFalse(viewModel.addPerformer("ILIFE!"))
+        viewModel.removePerformer("iLiFE!")
+
+        XCTAssertEqual(viewModel.performers, ["Mirror,Mirror"])
     }
 
     func testVenueSelectionSavesResolvedLocation() throws {

@@ -12,6 +12,7 @@ struct LiveEditorView: View {
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var showsVenuePicker = false
     @State private var showsTicketEntry = false
+    @State private var performerDraft = ""
 
     var body: some View {
         NavigationStack {
@@ -55,8 +56,6 @@ struct LiveEditorView: View {
                 Section("editor.basic") {
                     TextField("field.artist", text: $viewModel.artistName)
                         .textContentType(.organizationName)
-                    TextField("field.performers", text: $viewModel.performersText, axis: .vertical)
-                        .lineLimit(1...3)
                     TextField("field.title", text: $viewModel.title, axis: .vertical)
                         .lineLimit(1...3)
                     Picker("field.status", selection: $viewModel.status) {
@@ -65,6 +64,8 @@ struct LiveEditorView: View {
                         }
                     }
                 }
+
+                performerSection
 
                 Section("editor.schedule") {
                     if let eventDate = viewModel.eventDate {
@@ -232,6 +233,50 @@ struct LiveEditorView: View {
                 }
                 .presentationDetents([.medium])
             }
+        }
+    }
+
+    private var performerSection: some View {
+        Section {
+            ForEach(viewModel.performers, id: \.self) { performer in
+                HStack {
+                    Label(performer, systemImage: "person.2.fill")
+                    Spacer()
+                    Button {
+                        viewModel.removePerformer(performer)
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("performer.remove \(performer)"))
+                }
+            }
+
+            HStack {
+                TextField("performer.add.placeholder", text: $performerDraft)
+                    .textContentType(.organizationName)
+                    .submitLabel(.done)
+                    .onSubmit(addPerformer)
+                Button(action: addPerformer) {
+                    Image(systemName: "plus.circle.fill")
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .disabled(performerDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityLabel(Text("performer.add"))
+            }
+        } header: {
+            Text("field.performers")
+        } footer: {
+            Text("performer.help")
+        }
+    }
+
+    private func addPerformer() {
+        if viewModel.addPerformer(performerDraft) {
+            performerDraft = ""
         }
     }
 

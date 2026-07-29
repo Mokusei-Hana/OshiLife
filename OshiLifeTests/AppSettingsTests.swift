@@ -29,6 +29,7 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(settings.oshiColor, .purple)
         XCTAssertEqual(settings.homeDisplayStyle, .card)
         XCTAssertEqual(settings.language, .system)
+        XCTAssertTrue(settings.selectedPerformerFilters.isEmpty)
     }
 
     func testPersistsSelections() {
@@ -39,6 +40,7 @@ final class AppSettingsTests: XCTestCase {
         settings.oshiColor = .blue
         settings.homeDisplayStyle = .list
         settings.language = .simplifiedChinese
+        settings.selectedPerformerFilters = ["iLiFE!", "TENRIN"]
 
         let reloaded = AppSettings(defaults: defaults)
 
@@ -51,6 +53,7 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(reloaded.oshiColor, .blue)
         XCTAssertEqual(reloaded.homeDisplayStyle, .list)
         XCTAssertEqual(reloaded.language, .simplifiedChinese)
+        XCTAssertEqual(reloaded.selectedPerformerFilters, ["iLiFE!", "TENRIN"])
     }
 
     func testUnknownRawValuesFallBackToDefaults() {
