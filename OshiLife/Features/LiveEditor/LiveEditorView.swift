@@ -12,7 +12,6 @@ struct LiveEditorView: View {
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var showsVenuePicker = false
     @State private var showsTicketEntry = false
-    @State private var selectedScheduleOptionID: UUID?
     @State private var showsPerformerPicker = false
 
     var body: some View {
@@ -66,8 +65,6 @@ struct LiveEditorView: View {
                     }
                 }
 
-                performerSection
-
                 Section("editor.schedule") {
                     if viewModel.scheduleOptions.count > 1 {
                         scheduleDayPicker
@@ -96,6 +93,8 @@ struct LiveEditorView: View {
                         DatePicker("field.start_time", selection: $viewModel.startTime, displayedComponents: .hourAndMinute)
                     }
                 }
+
+                performerSection
 
                 Section("editor.location") {
                     if viewModel.venue.isEmpty && viewModel.address.isEmpty {
@@ -348,25 +347,57 @@ struct LiveEditorView: View {
 
     // MARK: - Day selector
 
-    /// A Picker row showing the available days for a multi-day event.
-    /// Only rendered when `viewModel.scheduleOptions.count > 1`.
     private var scheduleDayPicker: some View {
-        Picker("field.schedule_day", selection: $selectedScheduleOptionID) {
-            Text("field.schedule_day.none").tag(UUID?.none)
-            ForEach(viewModel.scheduleOptions) { option in
-                Text(scheduleDayLabel(option)).tag(Optional(option.id))
-            }
-        }
-        .onChange(of: selectedScheduleOptionID) { _, newID in
-            guard let newID,
-                  let option = viewModel.scheduleOptions.first(where: { $0.id == newID })
-            else { return }
-            viewModel.selectScheduleDay(option)
-        }
-    }
+        ForEach(viewModel.scheduleOptions) { option in
+            let isSelected = viewModel.selectedScheduleOptionIDs.contains(option.id)
+            let isActive = viewModel.activeScheduleOptionID == option.id
 
-    private func scheduleDayLabel(_ option: EventScheduleOption) -> String {
-        let dateText = option.date.formatted(.dateTime.year().month().day())
-        return "\(option.dayLabel)  \(dateText)"
+            HStack(spacing: 8) {
+                Button {
+                    viewModel.selectScheduleDay(option)
+                } label: {
+                    HStack(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(option.dayLabel)
+                                .font(.subheadline.weight(.semibold))
+                                .lineLimit(1)
+                            Text(option.date, format: .dateTime.year().month().day().weekday())
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer(minLength: 8)
+
+                        if isActive {
+                            Label("schedule.editing", systemImage: "pencil")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tint)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    viewModel.setScheduleParticipation(option, isSelected: !isSelected)
+                } label: {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.title3)
+                        .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(
+                    Text(LocalizedStringKey(
+                        isSelected ? "schedule.remove_participation" : "schedule.add_participation"
+                    ))
+                )
+            }
+            .background(
+                isActive ? Color.accentColor.opacity(0.08) : Color.clear,
+                in: .rect(cornerRadius: DesignRadius.medium)
+            )
+        }
     }
 }

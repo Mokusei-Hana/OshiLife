@@ -50,4 +50,24 @@ final class LiveStoreTests: XCTestCase {
         XCTAssertEqual(fetched.latitude, 35.0)
         XCTAssertEqual(fetched.longitude, 139.0)
     }
+
+    func testExistingEventDefaultsRemainCompatibleWithScheduleMetadata() throws {
+        let container = try ModelContainerFactory.makeInMemory()
+        let store = LiveStore(container: container)
+        let event = LiveEvent(
+            artistName: "A",
+            title: "Existing",
+            eventDate: .now,
+            performers: ["TENRIN"]
+        )
+
+        try store.insert(event)
+        let fetched = try XCTUnwrap(store.event(id: event.id))
+
+        XCTAssertNil(fetched.scheduleGroupID)
+        XCTAssertNil(fetched.scheduleOptionID)
+        XCTAssertTrue(fetched.scheduleLabel.isEmpty)
+        XCTAssertTrue(fetched.scheduleOptions.isEmpty)
+        XCTAssertEqual(fetched.performers, ["TENRIN"])
+    }
 }

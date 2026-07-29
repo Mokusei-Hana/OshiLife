@@ -109,7 +109,9 @@ final class LiveListViewModel {
             try store.delete(event)
             load()
             do {
-                try imageStore.remove(relativePath: imagePath)
+                if try !store.isCoverImageReferenced(imagePath) {
+                    try imageStore.remove(relativePath: imagePath)
+                }
             } catch {
                 errorMessage = error.localizedDescription
             }

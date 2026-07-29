@@ -34,12 +34,23 @@ final class LiveStore {
         return try context.fetch(descriptor).first
     }
 
+    func events(scheduleGroupID: UUID) throws -> [LiveEvent] {
+        try context.fetch(FetchDescriptor<LiveEvent>())
+            .filter { $0.scheduleGroupID == scheduleGroupID }
+    }
+
     func insert(_ event: LiveEvent) throws {
         context.insert(event)
         try context.save()
     }
 
     func save() throws {
+        try context.save()
+    }
+
+    func save(inserting events: [LiveEvent], deleting removedEvents: [LiveEvent]) throws {
+        removedEvents.forEach { context.delete($0) }
+        events.forEach { context.insert($0) }
         try context.save()
     }
 
@@ -50,5 +61,11 @@ final class LiveStore {
 
     func rollback() {
         context.rollback()
+    }
+
+    func isCoverImageReferenced(_ relativePath: String?) throws -> Bool {
+        guard let relativePath else { return false }
+        return try context.fetch(FetchDescriptor<LiveEvent>())
+            .contains { $0.coverImagePath == relativePath }
     }
 }

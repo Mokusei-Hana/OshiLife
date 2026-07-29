@@ -14,6 +14,9 @@ struct LiveCardView: View {
             .frame(width: 116)
 
             VStack(alignment: .leading, spacing: 10) {
+                if !event.scheduleLabel.isEmpty {
+                    ScheduleBadge(label: event.scheduleLabel)
+                }
                 Text(event.title)
                     .font(.headline)
                     .foregroundStyle(.primary)

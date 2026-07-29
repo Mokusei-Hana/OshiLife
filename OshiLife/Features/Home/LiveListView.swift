@@ -65,6 +65,9 @@ struct LiveListView: View {
                         viewModel.reloadAfterCreatingEvent()
                     } else {
                         viewModel.load()
+                        path.removeAll { id in
+                            !viewModel.events.contains { $0.id == id }
+                        }
                     }
                 }
             )

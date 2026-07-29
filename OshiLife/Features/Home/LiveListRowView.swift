@@ -16,6 +16,9 @@ struct LiveListRowView: View {
             .clipShape(.rect(cornerRadius: DesignRadius.small))
 
             VStack(alignment: .leading, spacing: 7) {
+                if !event.scheduleLabel.isEmpty {
+                    ScheduleBadge(label: event.scheduleLabel)
+                }
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(event.title)
                         .font(.headline)

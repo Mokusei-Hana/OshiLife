@@ -19,8 +19,8 @@ struct EventImportDetails: Codable, Hashable, Sendable {
     /// destination is stored in a structured field.
     var shortenedLinkURLs: [URL]
     /// Individual days for a multi-day event (e.g. DAY1/DAY2/DAY3).
-    /// Empty for single-day events. When non-empty the editor shows a day
-    /// selector so the user can choose which day they are attending.
+    /// Empty for single-day events. When non-empty the editor lets the user
+    /// choose one or more schedules to attend.
     var scheduleOptions: [EventScheduleOption]
 
     private enum CodingKeys: String, CodingKey {

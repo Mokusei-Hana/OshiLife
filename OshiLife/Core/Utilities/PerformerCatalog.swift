@@ -1,6 +1,18 @@
 import Foundation
 
 enum PerformerCatalog {
+    static func uniqueNames(_ names: [String]) -> [String] {
+        names.reduce(into: []) { result, name in
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty,
+                  !result.contains(where: {
+                      $0.localizedCaseInsensitiveCompare(trimmed) == .orderedSame
+                  })
+            else { return }
+            result.append(trimmed)
+        }
+    }
+
     static func namesByUsage(in events: [LiveEvent]) -> [String] {
         let counts = events
             .flatMap(\.performers)

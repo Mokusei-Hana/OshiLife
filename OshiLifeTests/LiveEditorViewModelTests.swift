@@ -78,6 +78,7 @@ final class LiveEditorViewModelTests: XCTestCase {
         XCTAssertEqual(saved?.selectedTicketName, "Sチケット")
         XCTAssertEqual(saved?.ticketOptions.count, 2)
         XCTAssertEqual(saved?.performers, ["iLiFE!"])
+        XCTAssertEqual(saved?.performerCandidates, ["iLiFE!", "のんふぃく！"])
         XCTAssertEqual(viewModel.title, "編集したタイトル")
     }
 
@@ -138,6 +139,17 @@ final class LiveEditorViewModelTests: XCTestCase {
         )
 
         XCTAssertEqual(Set(collapsed), selected)
+    }
+
+    func testPerformerCandidateSearchMergesSelectedNamesWithoutDuplicates() {
+        let names = PerformerCatalog.uniqueNames([
+            "TENRIN",
+            "iLiFE!",
+            "tenrin",
+            "のんふぃく！"
+        ])
+
+        XCTAssertEqual(names, ["TENRIN", "iLiFE!", "のんふぃく！"])
     }
 
     func testExistingEventKeepsPreviouslySavedPerformerSelections() throws {

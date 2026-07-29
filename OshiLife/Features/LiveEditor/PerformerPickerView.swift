@@ -6,6 +6,7 @@ struct PerformerPickerView: View {
 
     @State private var performerDraft = ""
     @State private var showsAllSuggestions = false
+    @State private var searchText = ""
 
     private let collapsedSuggestionLimit = 8
 
@@ -22,7 +23,7 @@ struct PerformerPickerView: View {
                         .padding(.vertical, 4)
 
                         if showsAllSuggestions
-                            || visibleSuggestions.count < viewModel.performerSuggestions.count {
+                            || visibleSuggestions.count < searchedSuggestions.count {
                             Button {
                                 showsAllSuggestions.toggle()
                             } label: {
@@ -54,6 +55,7 @@ struct PerformerPickerView: View {
             }
             .navigationTitle("field.performers")
             .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, prompt: "performer.search")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("common.done") {
@@ -65,12 +67,22 @@ struct PerformerPickerView: View {
     }
 
     private var visibleSuggestions: [String] {
-        guard !showsAllSuggestions else { return viewModel.performerSuggestions }
+        guard !showsAllSuggestions else { return searchedSuggestions }
         return PerformerCatalog.collapsedNames(
-            from: viewModel.performerSuggestions,
+            from: searchedSuggestions,
             selected: Set(viewModel.performers),
             limit: collapsedSuggestionLimit
         )
+    }
+
+    private var searchedSuggestions: [String] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return viewModel.performerSuggestions }
+        let selected = viewModel.performers
+        let matches = viewModel.performerSuggestions.filter {
+            $0.localizedCaseInsensitiveContains(query)
+        }
+        return PerformerCatalog.uniqueNames(selected + matches)
     }
 
     private func performerButton(_ performer: String) -> some View {

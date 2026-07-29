@@ -19,6 +19,9 @@ struct HomeEventCarouselCard: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
+                if !event.scheduleLabel.isEmpty {
+                    ScheduleBadge(label: event.scheduleLabel)
+                }
                 if !event.artistName.isEmpty {
                     Text(event.artistName)
                         .font(.subheadline.weight(.semibold))
@@ -67,6 +70,12 @@ struct HistoricalEventCard: View {
                 imageStore: imageStore,
                 height: 122
             )
+            .overlay(alignment: .topLeading) {
+                if !event.scheduleLabel.isEmpty {
+                    ScheduleBadge(label: event.scheduleLabel)
+                        .padding(8)
+                }
+            }
 
             VStack(alignment: .leading, spacing: 5) {
                 Text(event.title)

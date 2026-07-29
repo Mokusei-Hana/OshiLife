@@ -2,9 +2,9 @@ import Foundation
 
 /// A selectable day in a multi-day event (e.g. DAY1, DAY2, DAY3).
 ///
-/// When imported event data describes several schedules, the user can pick
-/// which day they plan to attend. Selecting a day updates the event date,
-/// open/start times, and performers in the editor.
+/// Imported schedules remain immutable candidates in the editor. Users can
+/// participate in multiple schedules, while each saved event keeps its own
+/// date, times, and explicitly selected performers.
 struct EventScheduleOption: Codable, Hashable, Sendable, Identifiable {
     /// Stable identity for use as `ForEach` / `Picker` tag.
     var id: UUID

@@ -206,7 +206,125 @@ final class MultiDayEventSelectionTests: XCTestCase {
         XCTAssertTrue(viewModel.performerSuggestions.contains("Mirror,Mirror"))
     }
 
-    // MARK: - 6. Existing imported events remain compatible
+    func testChangingScheduleUpdatesPerformerCandidatesAndPreservesSelections() throws {
+        let store = try makeStore()
+        let sourceURL = try XCTUnwrap(URL(string: "https://ticketdive.com/event/festival"))
+        let options = [
+            EventScheduleOption(
+                dayLabel: "DAY1",
+                date: try date(year: 2026, month: 8, day: 7),
+                performers: ["chuLa"]
+            ),
+            EventScheduleOption(
+                dayLabel: "DAY2",
+                date: try date(year: 2026, month: 8, day: 8),
+                performers: ["TENRIN"]
+            )
+        ]
+        let details = EventImportDetails(
+            title: "フェス",
+            date: options[0].date,
+            linkedURL: sourceURL,
+            scheduleOptions: options
+        )
+        let pending = PendingShareImport(sourceURL: sourceURL, authorName: "公式", eventDetails: details)
+        let viewModel = LiveEditorViewModel(store: store, pendingImport: pending)
+
+        XCTAssertTrue(viewModel.performerSuggestions.contains("chuLa"))
+        XCTAssertFalse(viewModel.performerSuggestions.contains("TENRIN"))
+        viewModel.addPerformer("chuLa")
+
+        viewModel.selectScheduleDay(options[1])
+
+        XCTAssertTrue(viewModel.performerSuggestions.contains("TENRIN"))
+        XCTAssertFalse(viewModel.performerSuggestions.contains("chuLa"))
+        XCTAssertTrue(viewModel.performers.isEmpty)
+        viewModel.addPerformer("TENRIN")
+
+        viewModel.selectScheduleDay(options[0])
+
+        XCTAssertEqual(viewModel.performers, ["chuLa"])
+    }
+
+    func testSavingMultipleSchedulesCreatesIndependentEventsWithSharedSource() throws {
+        let store = try makeStore()
+        let sourceURL = try XCTUnwrap(URL(string: "https://x.com/official/status/42"))
+        let eventURL = try XCTUnwrap(URL(string: "https://ticketdive.com/event/festival"))
+        let options = [
+            EventScheduleOption(
+                dayLabel: "DAY1",
+                date: try date(year: 2026, month: 8, day: 7),
+                performers: ["chuLa"]
+            ),
+            EventScheduleOption(
+                dayLabel: "Special Stage",
+                date: try date(year: 2026, month: 8, day: 8),
+                performers: ["TENRIN"]
+            )
+        ]
+        let details = EventImportDetails(
+            title: "フェス",
+            date: options[0].date,
+            linkedURL: eventURL,
+            scheduleOptions: options
+        )
+        let pending = PendingShareImport(sourceURL: sourceURL, authorName: "公式", eventDetails: details)
+        let viewModel = LiveEditorViewModel(store: store, pendingImport: pending)
+        viewModel.selectScheduleDay(options[0])
+        viewModel.addPerformer("chuLa")
+        viewModel.selectScheduleDay(options[1])
+        viewModel.addPerformer("TENRIN")
+
+        let saved = viewModel.save(
+            imageStore: ImageStore(rootURL: FileManager.default.temporaryDirectory)
+        )
+        let events = try store.fetchAll()
+
+        XCTAssertNotNil(saved)
+        XCTAssertEqual(events.count, 2)
+        XCTAssertEqual(Set(events.map(\.scheduleLabel)), ["DAY1", "Special Stage"])
+        XCTAssertEqual(Set(events.map(\.sourceURLString)), [sourceURL.absoluteString])
+        XCTAssertEqual(Set(events.compactMap(\.scheduleGroupID)).count, 1)
+        XCTAssertEqual(
+            Dictionary(uniqueKeysWithValues: events.map { ($0.scheduleLabel, $0.performers) }),
+            ["DAY1": ["chuLa"], "Special Stage": ["TENRIN"]]
+        )
+    }
+
+    func testEditingScheduleGroupCanRemoveParticipationAfterImport() throws {
+        let store = try makeStore()
+        let sourceURL = try XCTUnwrap(URL(string: "https://x.com/official/status/42"))
+        let options = [
+            EventScheduleOption(dayLabel: "DAY1", date: try date(year: 2026, month: 8, day: 7)),
+            EventScheduleOption(dayLabel: "DAY2", date: try date(year: 2026, month: 8, day: 8))
+        ]
+        let details = EventImportDetails(
+            title: "フェス",
+            date: options[0].date,
+            linkedURL: sourceURL,
+            scheduleOptions: options
+        )
+        let pending = PendingShareImport(sourceURL: sourceURL, authorName: "公式", eventDetails: details)
+        let importingViewModel = LiveEditorViewModel(store: store, pendingImport: pending)
+        importingViewModel.selectScheduleDay(options[1])
+        XCTAssertNotNil(importingViewModel.save(
+            imageStore: ImageStore(rootURL: FileManager.default.temporaryDirectory)
+        ))
+        let importedEvents = try store.fetchAll()
+        XCTAssertEqual(importedEvents.count, 2)
+
+        let editingViewModel = LiveEditorViewModel(store: store, event: importedEvents[0])
+        editingViewModel.setScheduleParticipation(options[1], isSelected: false)
+        XCTAssertNotNil(editingViewModel.save(
+            imageStore: ImageStore(rootURL: FileManager.default.temporaryDirectory)
+        ))
+
+        let remainingEvents = try store.fetchAll()
+        XCTAssertEqual(remainingEvents.count, 1)
+        XCTAssertEqual(remainingEvents[0].scheduleLabel, "DAY1")
+    }
+
+    // MARK: - Existing imported events remain compatible
 
     func testExistingImportedEventsWithoutScheduleOptionsAreCompatible() throws {
         let store = try makeStore()

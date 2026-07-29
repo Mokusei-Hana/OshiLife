@@ -108,6 +108,9 @@ struct LiveDetailView: View {
             .frame(maxWidth: .infinity, alignment: .center)
 
             VStack(alignment: .leading, spacing: 8) {
+                if !event.scheduleLabel.isEmpty {
+                    ScheduleBadge(label: event.scheduleLabel)
+                }
                 if !event.artistName.isEmpty {
                     Text(event.artistName)
                         .font(.headline)

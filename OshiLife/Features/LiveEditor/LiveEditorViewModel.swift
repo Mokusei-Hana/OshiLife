@@ -1,6 +1,13 @@
 import Foundation
 import Observation
 
+private struct EditableSchedule {
+    var date: Date
+    var openTime: Date?
+    var startTime: Date?
+    var performers: [String]
+}
+
 @MainActor
 @Observable
 final class LiveEditorViewModel {
@@ -8,9 +15,9 @@ final class LiveEditorViewModel {
     private let existingEvent: LiveEvent?
 
     let pendingImport: PendingShareImport?
-    /// Selectable days when the imported event lists multiple schedules.
-    /// Empty for single-day events; the UI only shows the picker when > 1.
-    let scheduleOptions: [EventScheduleOption]
+    var scheduleOptions: [EventScheduleOption]
+    var selectedScheduleOptionIDs: Set<UUID>
+    var activeScheduleOptionID: UUID?
     var artistName: String
     var title: String
     var eventDate: Date?
@@ -21,6 +28,9 @@ final class LiveEditorViewModel {
     var performers: [String]
     private var importedPerformerSuggestions: [String]
     private let savedPerformerSuggestions: [String]
+    private var scheduleDrafts: [UUID: EditableSchedule]
+    private var scheduleEvents: [UUID: LiveEvent]
+    private var scheduleGroupID: UUID?
     var ticketOptions: [TicketOption]
     var selectedTicketID: UUID?
     var venue: String
@@ -48,23 +58,72 @@ final class LiveEditorViewModel {
         existingEvent = event
         self.pendingImport = pendingImport
         let importedDetails = pendingImport?.eventDetails
-        let importedPerformers = Self.normalizedPerformers(
-            (importedDetails?.performers ?? [])
-                + (importedDetails?.scheduleOptions.flatMap(\.performers) ?? [])
+        let persistedScheduleOptions = event?.scheduleOptions ?? []
+        let importedScheduleOptions = importedDetails?.scheduleOptions ?? []
+        let resolvedScheduleOptions = persistedScheduleOptions.isEmpty
+            ? importedScheduleOptions
+            : persistedScheduleOptions
+        scheduleOptions = resolvedScheduleOptions
+        scheduleGroupID = event?.scheduleGroupID
+            ?? (resolvedScheduleOptions.count > 1 ? UUID() : nil)
+
+        let groupedEvents: [LiveEvent]
+        if let groupID = event?.scheduleGroupID {
+            groupedEvents = (try? store.events(scheduleGroupID: groupID)) ?? [event].compactMap { $0 }
+        } else {
+            groupedEvents = [event].compactMap { $0 }
+        }
+        scheduleEvents = groupedEvents.reduce(into: [:]) { result, groupedEvent in
+            guard let optionID = groupedEvent.scheduleOptionID else { return }
+            result[optionID] = groupedEvent
+        }
+        selectedScheduleOptionIDs = Set(scheduleEvents.keys)
+        if event == nil, let firstScheduleID = resolvedScheduleOptions.first?.id {
+            selectedScheduleOptionIDs.insert(firstScheduleID)
+        }
+        activeScheduleOptionID = event?.scheduleOptionID
+            ?? selectedScheduleOptionIDs.first
+            ?? resolvedScheduleOptions.first?.id
+
+        var resolvedDrafts = Dictionary(
+            uniqueKeysWithValues: resolvedScheduleOptions.map { option in
+                (
+                    option.id,
+                    EditableSchedule(
+                        date: option.date,
+                        openTime: option.openTime,
+                        startTime: option.startTime,
+                        performers: []
+                    )
+                )
+            }
         )
-        scheduleOptions = importedDetails?.scheduleOptions ?? []
+        for groupedEvent in groupedEvents {
+            guard let optionID = groupedEvent.scheduleOptionID else { continue }
+            resolvedDrafts[optionID] = EditableSchedule(
+                date: groupedEvent.eventDate,
+                openTime: groupedEvent.openTime,
+                startTime: groupedEvent.startTime,
+                performers: groupedEvent.performers
+            )
+        }
+        scheduleDrafts = resolvedDrafts
+
+        let activeDraft = activeScheduleOptionID.flatMap { resolvedDrafts[$0] }
         artistName = event?.artistName
             ?? (importedDetails?.performers.isEmpty == false ? importedDetails?.performers.joined(separator: " / ") : nil)
             ?? pendingImport?.authorName
             ?? ""
         title = event?.title ?? importedDetails?.title ?? ""
-        eventDate = event?.eventDate ?? importedDetails?.date
-        hasOpenTime = event?.openTime != nil || importedDetails?.openTime != nil
-        openTime = event?.openTime ?? importedDetails?.openTime ?? .now
-        hasStartTime = event?.startTime != nil || importedDetails?.startTime != nil
-        startTime = event?.startTime ?? importedDetails?.startTime ?? .now
-        performers = Self.normalizedPerformers(event?.performers ?? [])
-        importedPerformerSuggestions = event == nil ? importedPerformers : []
+        eventDate = activeDraft?.date ?? event?.eventDate ?? importedDetails?.date
+        hasOpenTime = activeDraft?.openTime != nil || event?.openTime != nil || importedDetails?.openTime != nil
+        openTime = activeDraft?.openTime ?? event?.openTime ?? importedDetails?.openTime ?? .now
+        hasStartTime = activeDraft?.startTime != nil || event?.startTime != nil || importedDetails?.startTime != nil
+        startTime = activeDraft?.startTime ?? event?.startTime ?? importedDetails?.startTime ?? .now
+        performers = Self.normalizedPerformers(activeDraft?.performers ?? event?.performers ?? [])
+        importedPerformerSuggestions = Self.normalizedPerformers(
+            event?.performerCandidates ?? importedDetails?.performers ?? []
+        )
         savedPerformerSuggestions = PerformerCatalog.namesByUsage(in: (try? store.fetchAll()) ?? [])
         ticketOptions = event?.ticketOptions ?? importedDetails?.ticketOptions ?? []
         selectedTicketID = event?.selectedTicketID
@@ -83,8 +142,15 @@ final class LiveEditorViewModel {
     var isEditing: Bool { existingEvent != nil }
     var existingCoverPath: String? { existingEvent?.coverImagePath }
     var performerSuggestions: [String] {
-        Self.normalizedPerformers(
-            performers + importedPerformerSuggestions + savedPerformerSuggestions
+        let activeScheduleCandidates = activeScheduleOptionID
+            .flatMap { activeID in scheduleOptions.first { $0.id == activeID } }
+            .map(\.performers)
+            ?? []
+        let scheduleCandidates = activeScheduleCandidates.isEmpty
+            ? importedPerformerSuggestions
+            : activeScheduleCandidates
+        return Self.normalizedPerformers(
+            performers + scheduleCandidates + savedPerformerSuggestions
         )
     }
     var performersText: String {
@@ -105,6 +171,9 @@ final class LiveEditorViewModel {
         }
         if eventDate == nil {
             messages.append(String(localized: "validation.date_required"))
+        }
+        if scheduleOptions.count > 1, selectedScheduleOptionIDs.isEmpty {
+            messages.append(String(localized: "validation.schedule_required"))
         }
         if !ticketURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
            LiveEvent.validHTTPURL(ticketURLString) == nil {
@@ -147,22 +216,31 @@ final class LiveEditorViewModel {
         performers.removeAll { $0 == performer }
     }
 
-    /// Applies the chosen schedule option to the editor fields.
-    ///
-    /// Existing manual edits to fields not covered by a day option are left
-    /// untouched. Call this whenever the user picks a different day.
     func selectScheduleDay(_ option: EventScheduleOption) {
-        eventDate = option.date
-        if let open = option.openTime {
-            openTime = open
-            hasOpenTime = true
+        storeActiveScheduleDraft()
+        selectedScheduleOptionIDs.insert(option.id)
+        activeScheduleOptionID = option.id
+        applyScheduleDraft(optionID: option.id)
+    }
+
+    func setScheduleParticipation(_ option: EventScheduleOption, isSelected: Bool) {
+        storeActiveScheduleDraft()
+        if isSelected {
+            selectedScheduleOptionIDs.insert(option.id)
+            activeScheduleOptionID = option.id
+            applyScheduleDraft(optionID: option.id)
+            return
         }
-        if let start = option.startTime {
-            startTime = start
-            hasStartTime = true
-        }
-        if !option.performers.isEmpty {
-            artistName = Self.normalizedPerformers(option.performers).joined(separator: " / ")
+
+        selectedScheduleOptionIDs.remove(option.id)
+        guard activeScheduleOptionID == option.id else { return }
+        activeScheduleOptionID = scheduleOptions.first {
+            selectedScheduleOptionIDs.contains($0.id)
+        }?.id
+        if let activeScheduleOptionID {
+            applyScheduleDraft(optionID: activeScheduleOptionID)
+        } else {
+            performers = []
         }
     }
 
@@ -222,10 +300,25 @@ final class LiveEditorViewModel {
                 ticketOptions = draft.eventDetails?.ticketOptions ?? []
             }
             if let imported = draft.eventDetails {
+                if scheduleOptions.isEmpty, !imported.scheduleOptions.isEmpty {
+                    scheduleOptions = imported.scheduleOptions
+                    scheduleGroupID = imported.scheduleOptions.count > 1 ? UUID() : nil
+                    for option in imported.scheduleOptions {
+                        scheduleDrafts[option.id] = EditableSchedule(
+                            date: option.date,
+                            openTime: option.openTime,
+                            startTime: option.startTime,
+                            performers: []
+                        )
+                    }
+                    if let first = imported.scheduleOptions.first {
+                        selectedScheduleOptionIDs = [first.id]
+                        activeScheduleOptionID = first.id
+                        applyScheduleDraft(optionID: first.id)
+                    }
+                }
                 importedPerformerSuggestions = Self.normalizedPerformers(
-                    importedPerformerSuggestions
-                        + imported.performers
-                        + imported.scheduleOptions.flatMap(\.performers)
+                    importedPerformerSuggestions + imported.performers
                 )
             }
             if coverImageData == nil {
@@ -275,6 +368,7 @@ final class LiveEditorViewModel {
         isSaving = true
         defer { isSaving = false }
 
+        storeActiveScheduleDraft()
         let oldImagePath = existingEvent?.coverImagePath
         var newImagePath: String?
         do {
@@ -282,37 +376,36 @@ final class LiveEditorViewModel {
                 newImagePath = try imageStore.saveJPEG(data: coverImageData)
             }
 
-            let event = existingEvent ?? LiveEvent(
-                artistName: artistName.trimmingCharacters(in: .whitespacesAndNewlines),
-                title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-                eventDate: eventDate
-            )
-            event.artistName = artistName.trimmingCharacters(in: .whitespacesAndNewlines)
-            event.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
-            event.eventDate = eventDate
-            event.openTime = hasOpenTime ? openTime : nil
-            event.startTime = hasStartTime ? startTime : nil
-            event.performers = performers
-            event.venue = venue.trimmingCharacters(in: .whitespacesAndNewlines)
-            event.address = address.trimmingCharacters(in: .whitespacesAndNewlines)
-            event.latitude = latitude
-            event.longitude = longitude
-            event.ticketURLString = ticketURLString.trimmingCharacters(in: .whitespacesAndNewlines)
-            event.sourceURLString = sourceURLString.trimmingCharacters(in: .whitespacesAndNewlines)
-            event.ticketOptions = ticketOptions
-            event.selectedTicketID = selectedTicketID
-            event.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
-            event.status = status
-            event.updatedAt = .now
-            if let newImagePath {
-                event.coverImagePath = newImagePath
-            } else if removesExistingCover {
-                event.coverImagePath = nil
+            let event: LiveEvent
+            if scheduleOptions.count > 1 {
+                event = try saveScheduleGroup(newImagePath: newImagePath)
+            } else {
+                event = existingEvent ?? LiveEvent(
+                    artistName: artistName.trimmingCharacters(in: .whitespacesAndNewlines),
+                    title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+                    eventDate: eventDate
+                )
+                applyCommonFields(to: event)
+                event.eventDate = eventDate
+                event.openTime = hasOpenTime ? openTime : nil
+                event.startTime = hasStartTime ? startTime : nil
+                event.performers = performers
+                event.performerCandidates = importedPerformerSuggestions
+                event.scheduleGroupID = nil
+                event.scheduleOptionID = nil
+                event.scheduleLabel = ""
+                event.scheduleOptions = []
+                applyCoverChange(to: event, newImagePath: newImagePath)
+
+                if existingEvent == nil {
+                    try store.insert(event)
+                } else {
+                    try store.save()
+                }
             }
 
-            if existingEvent == nil { try store.insert(event) } else { try store.save() }
-
-            if oldImagePath != event.coverImagePath {
+            if oldImagePath != event.coverImagePath,
+               try !store.isCoverImageReferenced(oldImagePath) {
                 try? imageStore.remove(relativePath: oldImagePath)
             }
             errorMessage = nil
@@ -325,6 +418,106 @@ final class LiveEditorViewModel {
         }
     }
 
+    private func saveScheduleGroup(newImagePath: String?) throws -> LiveEvent {
+        let groupID = scheduleGroupID ?? UUID()
+        scheduleGroupID = groupID
+        let activeID = activeScheduleOptionID
+            ?? scheduleOptions.first { selectedScheduleOptionIDs.contains($0.id) }?.id
+        var insertedEvents: [LiveEvent] = []
+        var savedEvents: [UUID: LiveEvent] = [:]
+
+        for option in scheduleOptions where selectedScheduleOptionIDs.contains(option.id) {
+            let draft = scheduleDrafts[option.id] ?? EditableSchedule(
+                date: option.date,
+                openTime: option.openTime,
+                startTime: option.startTime,
+                performers: []
+            )
+            let isNewEvent = scheduleEvents[option.id] == nil
+            let event = scheduleEvents[option.id] ?? LiveEvent(
+                artistName: artistName.trimmingCharacters(in: .whitespacesAndNewlines),
+                title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+                eventDate: draft.date
+            )
+
+            if isNewEvent || option.id == activeID {
+                applyCommonFields(to: event)
+            }
+            event.eventDate = draft.date
+            event.openTime = draft.openTime
+            event.startTime = draft.startTime
+            event.performers = draft.performers
+            event.performerCandidates = option.performers
+            event.scheduleGroupID = groupID
+            event.scheduleOptionID = option.id
+            event.scheduleLabel = option.dayLabel
+            event.scheduleOptions = scheduleOptions
+
+            if isNewEvent {
+                event.coverImagePath = newImagePath ?? existingEvent?.coverImagePath
+                insertedEvents.append(event)
+            } else if option.id == activeID {
+                applyCoverChange(to: event, newImagePath: newImagePath)
+            }
+            savedEvents[option.id] = event
+        }
+
+        let removedEvents = scheduleEvents.compactMap { optionID, event in
+            selectedScheduleOptionIDs.contains(optionID) ? nil : event
+        }
+        try store.save(inserting: insertedEvents, deleting: removedEvents)
+        scheduleEvents = savedEvents
+
+        guard let result = activeID.flatMap({ savedEvents[$0] }) ?? savedEvents.values.first else {
+            throw LiveEditorSaveError.missingSelectedSchedule
+        }
+        return result
+    }
+
+    private func applyCommonFields(to event: LiveEvent) {
+        event.artistName = artistName.trimmingCharacters(in: .whitespacesAndNewlines)
+        event.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        event.venue = venue.trimmingCharacters(in: .whitespacesAndNewlines)
+        event.address = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        event.latitude = latitude
+        event.longitude = longitude
+        event.ticketURLString = ticketURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        event.sourceURLString = sourceURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        event.ticketOptions = ticketOptions
+        event.selectedTicketID = selectedTicketID
+        event.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        event.status = status
+        event.updatedAt = .now
+    }
+
+    private func applyCoverChange(to event: LiveEvent, newImagePath: String?) {
+        if let newImagePath {
+            event.coverImagePath = newImagePath
+        } else if removesExistingCover {
+            event.coverImagePath = nil
+        }
+    }
+
+    private func storeActiveScheduleDraft() {
+        guard let activeScheduleOptionID, let eventDate else { return }
+        scheduleDrafts[activeScheduleOptionID] = EditableSchedule(
+            date: eventDate,
+            openTime: hasOpenTime ? openTime : nil,
+            startTime: hasStartTime ? startTime : nil,
+            performers: performers
+        )
+    }
+
+    private func applyScheduleDraft(optionID: UUID) {
+        guard let draft = scheduleDrafts[optionID] else { return }
+        eventDate = draft.date
+        hasOpenTime = draft.openTime != nil
+        openTime = draft.openTime ?? .now
+        hasStartTime = draft.startTime != nil
+        startTime = draft.startTime ?? .now
+        performers = draft.performers
+    }
+
     private static func normalizedPerformers(_ performers: [String]) -> [String] {
         performers.reduce(into: []) { result, performer in
             let trimmed = performer.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -334,5 +527,12 @@ final class LiveEditorViewModel {
             result.append(trimmed)
         }
     }
+}
 
+private enum LiveEditorSaveError: LocalizedError {
+    case missingSelectedSchedule
+
+    var errorDescription: String? {
+        String(localized: "validation.schedule_required")
+    }
 }
