@@ -8,6 +8,9 @@ final class LiveEditorViewModel {
     private let existingEvent: LiveEvent?
 
     let pendingImport: PendingShareImport?
+    /// Selectable days when the imported event lists multiple schedules.
+    /// Empty for single-day events; the UI only shows the picker when > 1.
+    let scheduleOptions: [EventScheduleOption]
     var artistName: String
     var title: String
     var eventDate: Date?
@@ -44,6 +47,7 @@ final class LiveEditorViewModel {
         existingEvent = event
         self.pendingImport = pendingImport
         let importedDetails = pendingImport?.eventDetails
+        scheduleOptions = importedDetails?.scheduleOptions ?? []
         artistName = event?.artistName
             ?? (importedDetails?.performers.isEmpty == false ? importedDetails?.performers.joined(separator: " / ") : nil)
             ?? pendingImport?.authorName
@@ -132,6 +136,26 @@ final class LiveEditorViewModel {
 
     func removePerformer(_ performer: String) {
         performers.removeAll { $0 == performer }
+    }
+
+    /// Applies the chosen schedule option to the editor fields.
+    ///
+    /// Existing manual edits to fields not covered by a day option are left
+    /// untouched. Call this whenever the user picks a different day.
+    func selectScheduleDay(_ option: EventScheduleOption) {
+        eventDate = option.date
+        if let open = option.openTime {
+            openTime = open
+            hasOpenTime = true
+        }
+        if let start = option.startTime {
+            startTime = start
+            hasStartTime = true
+        }
+        if !option.performers.isEmpty {
+            performers = Self.normalizedPerformers(option.performers)
+            artistName = performers.joined(separator: " / ")
+        }
     }
 
     @discardableResult
@@ -298,4 +322,5 @@ final class LiveEditorViewModel {
             result.append(trimmed)
         }
     }
+
 }

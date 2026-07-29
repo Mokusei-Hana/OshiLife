@@ -18,6 +18,10 @@ struct EventImportDetails: Codable, Hashable, Sendable {
     /// `linkedURL`. Kept so Notes cleanup can drop them once their
     /// destination is stored in a structured field.
     var shortenedLinkURLs: [URL]
+    /// Individual days for a multi-day event (e.g. DAY1/DAY2/DAY3).
+    /// Empty for single-day events. When non-empty the editor shows a day
+    /// selector so the user can choose which day they are attending.
+    var scheduleOptions: [EventScheduleOption]
 
     private enum CodingKeys: String, CodingKey {
         case title
@@ -32,6 +36,7 @@ struct EventImportDetails: Codable, Hashable, Sendable {
         case imageURL
         case linkedURL
         case shortenedLinkURLs
+        case scheduleOptions
     }
 
     init(
@@ -46,7 +51,8 @@ struct EventImportDetails: Codable, Hashable, Sendable {
         ticketInformation: String? = nil,
         imageURL: URL? = nil,
         linkedURL: URL,
-        shortenedLinkURLs: [URL] = []
+        shortenedLinkURLs: [URL] = [],
+        scheduleOptions: [EventScheduleOption] = []
     ) {
         self.title = title
         self.date = date
@@ -60,6 +66,7 @@ struct EventImportDetails: Codable, Hashable, Sendable {
         self.imageURL = imageURL
         self.linkedURL = linkedURL
         self.shortenedLinkURLs = shortenedLinkURLs
+        self.scheduleOptions = scheduleOptions
     }
 
     init(from decoder: any Decoder) throws {
@@ -76,6 +83,7 @@ struct EventImportDetails: Codable, Hashable, Sendable {
         imageURL = try container.decodeIfPresent(URL.self, forKey: .imageURL)
         linkedURL = try container.decode(URL.self, forKey: .linkedURL)
         shortenedLinkURLs = try container.decodeIfPresent([URL].self, forKey: .shortenedLinkURLs) ?? []
+        scheduleOptions = try container.decodeIfPresent([EventScheduleOption].self, forKey: .scheduleOptions) ?? []
     }
 
     /// Fills fields this source could not recognize with values from another
@@ -97,6 +105,7 @@ struct EventImportDetails: Codable, Hashable, Sendable {
         merged.ticketInformation = ticketInformation ?? other.ticketInformation
         merged.imageURL = imageURL ?? other.imageURL
         if merged.shortenedLinkURLs.isEmpty { merged.shortenedLinkURLs = other.shortenedLinkURLs }
+        if merged.scheduleOptions.isEmpty { merged.scheduleOptions = other.scheduleOptions }
         return merged
     }
 }

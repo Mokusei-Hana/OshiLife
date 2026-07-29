@@ -61,6 +61,8 @@
     "field.open_time" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "開場時間" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "入场时间" } } } },
     "field.open_time.enabled" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "開場時間を設定" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "设置入场时间" } } } },
     "field.performers" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "出演者" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "出演者" } } } },
+    "field.schedule_day" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "演出日程" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "演出日程" } } } },
+    "field.schedule_day.none" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "未選択" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "未选择" } } } },
     "field.selected_ticket" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "購入したチケット" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已购票种" } } } },
     "field.source_url" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "元の投稿URL" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "原帖链接" } } } },
     "field.start_time" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "開演時間" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "开始时间" } } } },

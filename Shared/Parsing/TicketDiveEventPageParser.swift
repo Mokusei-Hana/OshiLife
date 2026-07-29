@@ -46,6 +46,8 @@ struct TicketDiveEventPageParser: EventPageParsing, Sendable {
         guard eventDates != nil || venue != nil || times.open != nil || times.start != nil
             || !tickets.options.isEmpty || !performers.isEmpty else { return nil }
 
+        let scheduleOptions = Self.scheduleOptions(from: dayBlocks)
+
         return EventImportDetails(
             title: title,
             date: eventDates?.start,
@@ -57,7 +59,8 @@ struct TicketDiveEventPageParser: EventPageParsing, Sendable {
             ticketOptions: tickets.options,
             ticketInformation: tickets.information,
             imageURL: Self.coverImageURL(html: html, openGraph: openGraph, sourceURL: sourceURL),
-            linkedURL: sourceURL
+            linkedURL: sourceURL,
+            scheduleOptions: scheduleOptions
         )
     }
 
@@ -133,6 +136,8 @@ struct TicketDiveEventPageParser: EventPageParsing, Sendable {
     // MARK: - DAY blocks
 
     private struct DayBlock {
+        /// Human-readable label extracted from the header, e.g. "DAY1".
+        var label: String
         /// Block content with the `DAY1` prefix stripped from the header, so
         /// `DAY1日時2026/8/7(金)` contributes its 日時 label like any line.
         var lines: [String]
@@ -146,19 +151,48 @@ struct TicketDiveEventPageParser: EventPageParsing, Sendable {
             }
             return JapaneseEventTextParser.dateRange(in: lines.joined(separator: "\n"))?.start
         }
+
+        var openTime: Date? {
+            let clocks = TicketDiveEventPageParser.clockTimes(in: lines.joined(separator: "\n"))
+            guard let clock = clocks.open else { return nil }
+            return TicketDiveEventPageParser.date(of: clock, on: date ?? TicketDiveEventPageParser.referenceDay)
+        }
+
+        var startTime: Date? {
+            let clocks = TicketDiveEventPageParser.clockTimes(in: lines.joined(separator: "\n"))
+            guard let clock = clocks.start else { return nil }
+            return TicketDiveEventPageParser.date(of: clock, on: date ?? TicketDiveEventPageParser.referenceDay)
+        }
+
+        var performers: [String] {
+            TicketDiveEventPageParser.performers(inLines: lines)
+        }
     }
 
     private static func isDayHeader(_ line: String) -> Bool {
         line.range(of: #"^【?\s*DAY\s*\d+(?!\d)"#, options: [.regularExpression, .caseInsensitive]) != nil
     }
 
+    /// Extracts the canonical label (e.g. "DAY1") from a DAY header line.
+    private static func dayLabel(from line: String) -> String {
+        guard let match = line.range(
+            of: #"(?:DAY\s*\d+)"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) else { return "DAY" }
+        return line[match]
+            .replacingOccurrences(of: " ", with: "")
+            .uppercased()
+    }
+
     private static func dayBlocks(in lines: [String], firstDayIndex: Int?) -> [DayBlock] {
         guard let firstDayIndex else { return [] }
         var blocks: [DayBlock] = []
+        var currentLabel = ""
         var current: [String]?
         for line in lines[firstDayIndex...] {
             if isDayHeader(line) {
-                if let finished = current { blocks.append(DayBlock(lines: finished)) }
+                if let finished = current { blocks.append(DayBlock(label: currentLabel, lines: finished)) }
+                currentLabel = dayLabel(from: line)
                 let remainder = line.replacingOccurrences(
                     of: #"^【?\s*DAY\s*\d+\s*】?\s*"#,
                     with: "",
@@ -170,14 +204,33 @@ struct TicketDiveEventPageParser: EventPageParsing, Sendable {
             // The purchase button ends a day's block; lines between it and
             // the next DAY header belong to no day.
             if line.range(of: #"^選択する"#, options: .regularExpression) != nil {
-                if let finished = current { blocks.append(DayBlock(lines: finished)) }
+                if let finished = current { blocks.append(DayBlock(label: currentLabel, lines: finished)) }
                 current = nil
                 continue
             }
             current?.append(line)
         }
-        if let finished = current { blocks.append(DayBlock(lines: finished)) }
+        if let finished = current { blocks.append(DayBlock(label: currentLabel, lines: finished)) }
         return blocks
+    }
+
+    // MARK: - Schedule options
+
+    /// Builds selectable schedule options from parsed DAY blocks.
+    /// Returns an empty array for single-day events (< 2 blocks) so the
+    /// editor shows the day selector only when multiple schedules exist.
+    private static func scheduleOptions(from dayBlocks: [DayBlock]) -> [EventScheduleOption] {
+        guard dayBlocks.count >= 2 else { return [] }
+        return dayBlocks.compactMap { block in
+            guard let date = block.date else { return nil }
+            return EventScheduleOption(
+                dayLabel: block.label,
+                date: date,
+                openTime: block.openTime,
+                startTime: block.startTime,
+                performers: block.performers
+            )
+        }
     }
 
     // MARK: - Dates

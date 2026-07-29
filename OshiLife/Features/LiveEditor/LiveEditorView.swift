@@ -12,6 +12,7 @@ struct LiveEditorView: View {
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var showsVenuePicker = false
     @State private var showsTicketEntry = false
+    @State private var selectedScheduleOptionID: UUID?
     @State private var showsPerformerPicker = false
 
     var body: some View {
@@ -68,6 +69,9 @@ struct LiveEditorView: View {
                 performerSection
 
                 Section("editor.schedule") {
+                    if viewModel.scheduleOptions.count > 1 {
+                        scheduleDayPicker
+                    }
                     if let eventDate = viewModel.eventDate {
                         DatePicker(
                             "field.date",
@@ -340,5 +344,29 @@ struct LiveEditorView: View {
         Label(key, systemImage: "exclamationmark.circle")
             .font(.caption)
             .foregroundStyle(.red)
+    }
+
+    // MARK: - Day selector
+
+    /// A Picker row showing the available days for a multi-day event.
+    /// Only rendered when `viewModel.scheduleOptions.count > 1`.
+    private var scheduleDayPicker: some View {
+        Picker("field.schedule_day", selection: $selectedScheduleOptionID) {
+            Text("field.schedule_day.none").tag(UUID?.none)
+            ForEach(viewModel.scheduleOptions) { option in
+                Text(scheduleDayLabel(option)).tag(Optional(option.id))
+            }
+        }
+        .onChange(of: selectedScheduleOptionID) { _, newID in
+            guard let newID,
+                  let option = viewModel.scheduleOptions.first(where: { $0.id == newID })
+            else { return }
+            viewModel.selectScheduleDay(option)
+        }
+    }
+
+    private func scheduleDayLabel(_ option: EventScheduleOption) -> String {
+        let dateText = option.date.formatted(.dateTime.year().month().day())
+        return "\(option.dayLabel)  \(dateText)"
     }
 }
