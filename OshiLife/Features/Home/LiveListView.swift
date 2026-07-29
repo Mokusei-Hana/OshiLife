@@ -60,7 +60,13 @@ struct LiveListView: View {
                 store: liveStore,
                 imageStore: imageStore,
                 event: route.event,
-                onSaved: { viewModel.load() }
+                onSaved: {
+                    if route.event == nil {
+                        viewModel.reloadAfterCreatingEvent()
+                    } else {
+                        viewModel.load()
+                    }
+                }
             )
         }
         let manualImportContent = editorContent.sheet(isPresented: $showsManualImport, onDismiss: {
@@ -86,7 +92,7 @@ struct LiveListView: View {
                 },
                 onSaved: {
                     importCoordinator.consumeCurrent()
-                    viewModel.load()
+                    viewModel.reloadAfterCreatingEvent()
                 },
                 onDiscard: { importCoordinator.discardCurrent() }
             )
@@ -171,11 +177,10 @@ struct LiveListView: View {
                     }
                 }
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 10)
+            .padding(.vertical, 2)
         }
+        .contentMargins(.horizontal, 16, for: .scrollContent)
         .scrollIndicators(.hidden)
-        .background(.bar)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("filter.performers"))
     }
@@ -193,9 +198,12 @@ struct LiveListView: View {
                 }
                 label
                     .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: 140)
             }
-            .padding(.horizontal, 14)
-            .frame(minHeight: 44)
+            .padding(.horizontal, 11)
+            .frame(height: 32)
             .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
             .background(
                 isSelected
@@ -204,6 +212,7 @@ struct LiveListView: View {
                 in: Capsule()
             )
         }
+        .frame(minHeight: 44)
         .buttonStyle(.plain)
         .contentShape(Capsule())
         .accessibilityAddTraits(isSelected ? .isSelected : [])

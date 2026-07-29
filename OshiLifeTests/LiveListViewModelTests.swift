@@ -38,6 +38,26 @@ final class LiveListViewModelTests: XCTestCase {
         XCTAssertEqual(upcoming.map(\.title), ["Sooner", "Later"])
     }
 
+    func testUpcomingEventsIncludesPlannedEventsFromToday() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let startOfToday = calendar.startOfDay(for: now)
+        let today = LiveEvent(
+            artistName: "A",
+            title: "Today",
+            eventDate: startOfToday,
+            status: .planned
+        )
+
+        let upcoming = LiveListViewModel.upcomingEvents(
+            in: [today],
+            now: now,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(upcoming.map(\.title), ["Today"])
+    }
+
     func testHistoricalEventsKeepsAttendedSortedDescending() {
         let older = LiveEvent(
             artistName: "A",
@@ -88,6 +108,29 @@ final class LiveListViewModelTests: XCTestCase {
             LiveEvent(artistName: "B", title: "Two", eventDate: now, performers: ["iLiFE!", "TENRIN"])
         ]
 
-        XCTAssertEqual(Set(viewModel.availablePerformers), ["iLiFE!", "TENRIN"])
+        XCTAssertEqual(viewModel.availablePerformers, ["TENRIN", "iLiFE!"])
+    }
+
+    func testAllPerformerFilterShowsEveryStatusFilteredEvent() throws {
+        let (viewModel, settings) = try makeViewModel()
+        viewModel.events = [
+            LiveEvent(artistName: "A", title: "Tagged", eventDate: now, performers: ["TENRIN"]),
+            LiveEvent(artistName: "B", title: "Untagged", eventDate: now)
+        ]
+        settings.selectedPerformerFilters = ["TENRIN"]
+        XCTAssertEqual(viewModel.filteredEvents.map(\.title), ["Tagged"])
+
+        viewModel.clearPerformerFilter()
+
+        XCTAssertEqual(viewModel.filteredEvents.map(\.title), ["Tagged", "Untagged"])
+    }
+
+    func testReloadAfterCreatingEventClearsPerformerFilter() throws {
+        let (viewModel, settings) = try makeViewModel()
+        settings.selectedPerformerFilters = ["TENRIN"]
+
+        viewModel.reloadAfterCreatingEvent()
+
+        XCTAssertTrue(settings.selectedPerformerFilters.isEmpty)
     }
 }

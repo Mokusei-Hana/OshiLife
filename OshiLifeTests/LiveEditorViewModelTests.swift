@@ -91,6 +91,26 @@ final class LiveEditorViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.performers, ["Mirror,Mirror"])
     }
 
+    func testPerformerSuggestionsAreSortedByUsageFrequency() throws {
+        let store = LiveStore(container: try ModelContainerFactory.makeInMemory())
+        try store.insert(LiveEvent(
+            artistName: "A",
+            title: "One",
+            eventDate: .now,
+            performers: ["TENRIN", "iLiFE!"]
+        ))
+        try store.insert(LiveEvent(
+            artistName: "B",
+            title: "Two",
+            eventDate: .now,
+            performers: ["TENRIN"]
+        ))
+
+        let viewModel = LiveEditorViewModel(store: store)
+
+        XCTAssertEqual(viewModel.performerSuggestions, ["TENRIN", "iLiFE!"])
+    }
+
     func testVenueSelectionSavesResolvedLocation() throws {
         let store = LiveStore(container: try ModelContainerFactory.makeInMemory())
         let viewModel = LiveEditorViewModel(store: store)

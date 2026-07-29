@@ -16,6 +16,7 @@ final class LiveEditorViewModel {
     var hasStartTime: Bool
     var startTime: Date
     var performers: [String]
+    let performerSuggestions: [String]
     var ticketOptions: [TicketOption]
     var selectedTicketID: UUID?
     var venue: String
@@ -56,6 +57,7 @@ final class LiveEditorViewModel {
         performers = Self.normalizedPerformers(
             event?.performers ?? importedDetails?.performers ?? []
         )
+        performerSuggestions = PerformerCatalog.namesByUsage(in: (try? store.fetchAll()) ?? [])
         ticketOptions = event?.ticketOptions ?? importedDetails?.ticketOptions ?? []
         selectedTicketID = event?.selectedTicketID
         venue = event?.venue ?? importedDetails?.venue ?? ""

@@ -37,18 +37,19 @@ final class LiveListViewModel {
     }
 
     var filteredEvents: [LiveEvent] {
-        events.filter { event in
-            let matchesStatus = filter.status.map { event.status == $0 } ?? true
-            let matchesPerformer = settings.selectedPerformerFilters.isEmpty
-                || !Set(event.performers).isDisjoint(with: settings.selectedPerformerFilters)
-            return matchesStatus && matchesPerformer
+        let statusFiltered = filter.status.map { status in
+            events.filter { $0.status == status }
+        } ?? events
+        guard !settings.selectedPerformerFilters.isEmpty else {
+            return statusFiltered
+        }
+        return statusFiltered.filter {
+            !Set($0.performers).isDisjoint(with: settings.selectedPerformerFilters)
         }
     }
 
     var availablePerformers: [String] {
-        Set(events.flatMap(\.performers))
-            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+        PerformerCatalog.namesByUsage(in: events)
     }
 
     var selectedPerformers: Set<String> {
@@ -67,9 +68,19 @@ final class LiveListViewModel {
         settings.selectedPerformerFilters.removeAll()
     }
 
-    static func upcomingEvents(in events: [LiveEvent], now: Date) -> [LiveEvent] {
-        events
-            .filter { $0.status == .planned && $0.eventDate > now }
+    func reloadAfterCreatingEvent() {
+        clearPerformerFilter()
+        load()
+    }
+
+    static func upcomingEvents(
+        in events: [LiveEvent],
+        now: Date,
+        calendar: Calendar = .current
+    ) -> [LiveEvent] {
+        let today = calendar.startOfDay(for: now)
+        return events
+            .filter { $0.status == .planned && $0.eventDate >= today }
             .sorted { $0.eventDate < $1.eventDate }
     }
 
