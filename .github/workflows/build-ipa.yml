@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - ioc-ci
   pull_request:
     branches:
       - main
+      - ioc-ci
   workflow_dispatch:
 
 permissions:
