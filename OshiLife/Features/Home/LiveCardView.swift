@@ -14,7 +14,7 @@ struct LiveCardView: View {
             .frame(width: 116)
             .overlay(alignment: .topLeading) {
                 if !event.scheduleLabel.isEmpty {
-                    ScheduleBadge(label: event.scheduleLabel)
+                    ScheduleBadge(label: event.scheduleLabel, maximumWidth: 96)
                         .padding(8)
                 }
             }

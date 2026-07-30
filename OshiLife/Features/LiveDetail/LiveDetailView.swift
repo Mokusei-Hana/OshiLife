@@ -37,12 +37,6 @@ struct LiveDetailView: View {
                     }
                 }
 
-                if !event.performerCandidates.isEmpty {
-                    detailSection("detail.official_lineup") {
-                        OfficialLineupView(performers: event.performerCandidates)
-                    }
-                }
-
                 if !event.ticketOptions.isEmpty || event.ticketURL != nil {
                     ticketSection
                 }
@@ -128,6 +122,17 @@ struct LiveDetailView: View {
                 Text(event.title)
                     .font(.largeTitle.bold())
                     .textSelection(.enabled)
+
+                if !event.performerCandidates.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("detail.official_lineup", systemImage: "person.3.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        OfficialLineupView(performers: event.performerCandidates)
+                    }
+                    .padding(.top, 4)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -346,6 +351,8 @@ private struct OfficialLineupView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(displayedLineupText)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
                 .lineLimit(isExpanded ? nil : collapsedLineLimit)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .textSelection(.enabled)

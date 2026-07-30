@@ -16,8 +16,7 @@ struct LiveListRowView: View {
             .clipShape(.rect(cornerRadius: DesignRadius.small))
             .overlay(alignment: .topLeading) {
                 if !event.scheduleLabel.isEmpty {
-                    ScheduleBadge(label: event.scheduleLabel)
-                        .scaleEffect(0.88, anchor: .topLeading)
+                    ScheduleBadge(label: event.scheduleLabel, maximumWidth: 72)
                         .padding(5)
                 }
             }
