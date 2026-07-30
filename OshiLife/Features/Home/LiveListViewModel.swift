@@ -90,6 +90,16 @@ final class LiveListViewModel {
             .sorted { $0.eventDate > $1.eventDate }
     }
 
+    static func supplementaryDashboardEvents(
+        in events: [LiveEvent],
+        excluding upcoming: [LiveEvent]
+    ) -> [LiveEvent] {
+        let upcomingIDs = Set(upcoming.map(\.id))
+        return events
+            .filter { !upcomingIDs.contains($0.id) }
+            .sorted { $0.eventDate > $1.eventDate }
+    }
+
     func load() {
         isLoading = true
         defer { isLoading = false }

@@ -13,6 +13,7 @@ struct LiveEditorView: View {
     @State private var showsVenuePicker = false
     @State private var showsTicketEntry = false
     @State private var showsPerformerPicker = false
+    @State private var showsAllSelectedPerformers = false
     private let collapsedPerformerLimit = 3
 
     var body: some View {
@@ -247,7 +248,7 @@ struct LiveEditorView: View {
     private var performerSection: some View {
         Section {
             TagFlowLayout(spacing: 8) {
-                ForEach(viewModel.performers.prefix(collapsedPerformerLimit), id: \.self) { performer in
+                ForEach(visibleSelectedPerformers, id: \.self) { performer in
                     Button {
                         viewModel.removePerformer(performer)
                     } label: {
@@ -272,14 +273,24 @@ struct LiveEditorView: View {
 
                 if viewModel.performers.count > collapsedPerformerLimit {
                     Button {
-                        showsPerformerPicker = true
+                        withAnimation(.snappy) {
+                            showsAllSelectedPerformers.toggle()
+                        }
                     } label: {
-                        Text("+\(viewModel.performers.count - collapsedPerformerLimit)")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 12)
-                            .frame(height: 34)
-                            .background(.secondary.opacity(0.12), in: Capsule())
+                        Label {
+                            Text(
+                                showsAllSelectedPerformers
+                                    ? String(localized: "performer.show_less")
+                                    : "+\(viewModel.performers.count - collapsedPerformerLimit)"
+                            )
+                        } icon: {
+                            Image(systemName: showsAllSelectedPerformers ? "chevron.up" : "ellipsis")
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 12)
+                        .frame(height: 34)
+                        .background(.secondary.opacity(0.12), in: Capsule())
                     }
                     .frame(minHeight: 44)
                     .buttonStyle(.plain)
@@ -311,6 +322,12 @@ struct LiveEditorView: View {
         } footer: {
             Text("performer.help")
         }
+    }
+
+    private var visibleSelectedPerformers: ArraySlice<String> {
+        showsAllSelectedPerformers
+            ? viewModel.performers[...]
+            : viewModel.performers.prefix(collapsedPerformerLimit)
     }
 
     private func ticketLabel(_ option: TicketOption) -> String {
@@ -365,90 +382,116 @@ struct LiveEditorView: View {
     // MARK: - Day selector
 
     private var scheduleDayPicker: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("schedule.participation")
+        VStack(alignment: .leading, spacing: 10) {
+            scheduleChipRow(
+                title: "schedule.participation",
+                systemImage: "checkmark.circle"
+            ) { option in
+                participationChip(option)
+            }
+
+            scheduleChipRow(
+                title: "schedule.editing",
+                systemImage: "pencil"
+            ) { option in
+                editingChip(option)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func scheduleChipRow<Chip: View>(
+        title: LocalizedStringKey,
+        systemImage: String,
+        @ViewBuilder chip: @escaping (EventScheduleOption) -> Chip
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(title, systemImage: systemImage)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
 
-            TagFlowLayout(spacing: 8) {
-                ForEach(viewModel.scheduleOptions) { option in
-                    let isSelected = viewModel.selectedScheduleOptionIDs.contains(option.id)
-
-                    Button {
-                        viewModel.setScheduleParticipation(option, isSelected: !isSelected)
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: isSelected ? "checkmark" : "plus")
-                                .font(.caption.bold())
-                            Text(option.dayLabel)
-                                .lineLimit(1)
-                        }
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
-                        .padding(.horizontal, 12)
-                        .frame(height: 34)
-                        .background(
-                            isSelected ? Color.accentColor.opacity(0.16) : Color.secondary.opacity(0.1),
-                            in: Capsule()
-                        )
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
+                    ForEach(viewModel.scheduleOptions) { option in
+                        chip(option)
                     }
-                    .frame(minHeight: 44)
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(isSelected ? .isSelected : [])
-                    .accessibilityLabel(
-                        Text(LocalizedStringKey(
-                            isSelected ? "schedule.remove_participation" : "schedule.add_participation"
-                        ))
-                    )
                 }
+                .padding(.vertical, 2)
             }
-
-            Divider()
-
-            Menu {
-                ForEach(viewModel.scheduleOptions.filter {
-                    viewModel.selectedScheduleOptionIDs.contains($0.id)
-                }) { option in
-                    Button {
-                        viewModel.selectScheduleDay(option)
-                    } label: {
-                        if viewModel.activeScheduleOptionID == option.id {
-                            Label(option.dayLabel, systemImage: "checkmark")
-                        } else {
-                            Text(option.dayLabel)
-                        }
-                    }
-                }
-            } label: {
-                HStack(spacing: 10) {
-                    Label("schedule.editing", systemImage: "pencil")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
-                    Spacer(minLength: 8)
-
-                    if let activeOption = viewModel.scheduleOptions.first(where: {
-                        $0.id == viewModel.activeScheduleOptionID
-                    }) {
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text(activeOption.dayLabel)
-                                .font(.subheadline.weight(.semibold))
-                            Text(activeOption.date, format: .dateTime.month().day().weekday())
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                }
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(viewModel.selectedScheduleOptionIDs.isEmpty)
+            .scrollIndicators(.hidden)
+            .defaultScrollAnchor(.leading)
         }
-        .padding(.vertical, 2)
+    }
+
+    private func participationChip(_ option: EventScheduleOption) -> some View {
+        let isSelected = viewModel.selectedScheduleOptionIDs.contains(option.id)
+
+        return Button {
+            viewModel.setScheduleParticipation(option, isSelected: !isSelected)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                Text(option.dayLabel)
+                    .lineLimit(1)
+            }
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+            .padding(.horizontal, 12)
+            .frame(height: 34)
+            .background(
+                isSelected ? Color.accentColor.opacity(0.14) : Color.secondary.opacity(0.08),
+                in: Capsule()
+            )
+        }
+        .frame(minHeight: 44)
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityLabel(
+            Text("\(option.dayLabel), \(option.date.formatted(date: .abbreviated, time: .omitted))")
+        )
+        .accessibilityHint(
+            Text(LocalizedStringKey(
+                isSelected ? "schedule.remove_participation" : "schedule.add_participation"
+            ))
+        )
+    }
+
+    private func editingChip(_ option: EventScheduleOption) -> some View {
+        let participates = viewModel.selectedScheduleOptionIDs.contains(option.id)
+        let isActive = viewModel.activeScheduleOptionID == option.id
+
+        return Button {
+            viewModel.selectScheduleDay(option)
+        } label: {
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 5) {
+                    if isActive {
+                        Image(systemName: "pencil")
+                            .font(.caption.bold())
+                    }
+                    Text(option.dayLabel)
+                        .lineLimit(1)
+                }
+                Text(option.date, format: .dateTime.month().day().weekday())
+                    .font(.caption2)
+                    .opacity(0.8)
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(isActive ? Color.white : Color.primary)
+            .padding(.horizontal, 12)
+            .frame(height: 44)
+            .background(
+                isActive ? Color.accentColor : Color.secondary.opacity(0.1),
+                in: Capsule()
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(!participates)
+        .opacity(participates ? 1 : 0.35)
+        .accessibilityAddTraits(isActive ? .isSelected : [])
+        .accessibilityLabel(
+            Text("\(option.dayLabel), \(option.date.formatted(date: .abbreviated, time: .omitted))")
+        )
+        .accessibilityHint(Text("schedule.editing"))
     }
 }

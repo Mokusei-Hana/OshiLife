@@ -349,30 +349,46 @@ struct TicketDiveEventPageParser: EventPageParsing, Sendable {
         let standalone = #"^(?:"# + japanese + "|" + latin + #")\s*:?\s*$"#
         for (index, line) in lines.enumerated() {
             if let value = firstCapture(inline, in: line, caseInsensitive: true) {
-                let names = collectNames(startingWith: value, continuingFrom: index + 1, in: lines)
+                let names = collectNames(
+                    startingWith: value,
+                    continuingFrom: index + 1,
+                    in: lines,
+                    allowsUnseparatedLines: endsWithSeparator(value)
+                )
                 if !names.isEmpty { return names }
             }
             if line.range(of: standalone, options: [.regularExpression, .caseInsensitive]) != nil {
-                let names = collectNames(startingWith: nil, continuingFrom: index + 1, in: lines)
+                let names = collectNames(
+                    startingWith: nil,
+                    continuingFrom: index + 1,
+                    in: lines,
+                    allowsUnseparatedLines: true
+                )
                 if !names.isEmpty { return names }
             }
         }
         return []
     }
 
-    /// Gathers a lineup that spans lines: each entry ends with a slash and
-    /// the final entry has none, which closes the list.
-    private static func collectNames(startingWith value: String?, continuingFrom index: Int, in lines: [String]) -> [String] {
+    /// Gathers a lineup that spans lines. Inline lists continue while entries
+    /// end in a slash; a standalone lineup heading accepts one unseparated
+    /// performer per line until the next semantic section.
+    private static func collectNames(
+        startingWith value: String?,
+        continuingFrom index: Int,
+        in lines: [String],
+        allowsUnseparatedLines: Bool
+    ) -> [String] {
         var chunks: [String] = []
-        var expectMore = true
+        var expectMore = allowsUnseparatedLines
         if let value {
             chunks.append(value)
-            expectMore = endsWithSeparator(value)
+            expectMore = allowsUnseparatedLines || endsWithSeparator(value)
         }
         for line in lines.dropFirst(index).prefix(320) where expectMore {
             if isSectionLabel(line) || isDayHeader(line) { break }
             chunks.append(line)
-            expectMore = endsWithSeparator(line)
+            expectMore = allowsUnseparatedLines || endsWithSeparator(line)
         }
         return chunks
             .flatMap { $0.components(separatedBy: performerSeparators) }

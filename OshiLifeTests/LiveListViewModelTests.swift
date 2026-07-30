@@ -78,6 +78,38 @@ final class LiveListViewModelTests: XCTestCase {
         XCTAssertEqual(history.map(\.title), ["Newer", "Older"])
     }
 
+    func testSupplementaryDashboardEventsIncludesEveryNonUpcomingEvent() {
+        let upcoming = LiveEvent(
+            artistName: "A",
+            title: "Upcoming",
+            eventDate: now.addingTimeInterval(86_400)
+        )
+        let plannedPast = LiveEvent(
+            artistName: "A",
+            title: "Planned Past",
+            eventDate: now.addingTimeInterval(-86_400)
+        )
+        let attended = LiveEvent(
+            artistName: "A",
+            title: "Attended",
+            eventDate: now.addingTimeInterval(-172_800),
+            status: .attended
+        )
+        let cancelled = LiveEvent(
+            artistName: "A",
+            title: "Cancelled",
+            eventDate: now.addingTimeInterval(172_800),
+            status: .cancelled
+        )
+
+        let remaining = LiveListViewModel.supplementaryDashboardEvents(
+            in: [plannedPast, upcoming, attended, cancelled],
+            excluding: [upcoming]
+        )
+
+        XCTAssertEqual(remaining.map(\.title), ["Cancelled", "Planned Past", "Attended"])
+    }
+
     func testPerformerFilterMatchesAnySelectedPerformer() throws {
         let (viewModel, settings) = try makeViewModel()
         let first = LiveEvent(

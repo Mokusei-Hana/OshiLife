@@ -8,18 +8,15 @@ struct ScheduleBadge: View {
             Text(label)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
+                .frame(maxWidth: 116)
         } icon: {
-            Image(systemName: "calendar.day.timeline.left")
+            Image(systemName: "calendar")
         }
         .font(.caption.weight(.semibold))
-        .foregroundStyle(.primary)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(.thickMaterial, in: Capsule())
-        .overlay {
-            Capsule()
-                .stroke(.white.opacity(0.22), lineWidth: 1)
-        }
+        .foregroundStyle(.tint)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 6)
+        .glassEffect(.regular.tint(Color.accentColor.opacity(0.15)), in: .capsule)
         .accessibilityLabel(Text("schedule.badge \(label)"))
     }
 }

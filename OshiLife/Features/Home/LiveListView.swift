@@ -178,27 +178,16 @@ struct LiveListView: View {
     }
 
     private func performerFilter(viewModel: LiveListViewModel) -> some View {
-        ViewThatFits(in: .horizontal) {
-            performerFilterRow(viewModel: viewModel, visiblePerformerCount: nil)
-            performerFilterRow(viewModel: viewModel, visiblePerformerCount: 4)
-            performerFilterRow(viewModel: viewModel, visiblePerformerCount: 3)
-            performerFilterRow(viewModel: viewModel, visiblePerformerCount: 2)
-            performerFilterRow(viewModel: viewModel, visiblePerformerCount: 1)
-        }
-        .padding(.horizontal, 16)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("filter.performers"))
-    }
-
-    private func performerFilterRow(
-        viewModel: LiveListViewModel,
-        visiblePerformerCount: Int?
-    ) -> some View {
         let performers = viewModel.availablePerformers
-        let visibleCount = min(visiblePerformerCount ?? performers.count, performers.count)
-        let overflowCount = performers.count - visibleCount
+        let visiblePerformers = PerformerCatalog.collapsedNames(
+            from: performers,
+            selected: viewModel.selectedPerformers,
+            limit: 4
+        )
+        let overflowCount = performers.count - visiblePerformers.count
 
-        return HStack(spacing: 8) {
+        return ScrollView(.horizontal) {
+            HStack(spacing: 8) {
                 filterButton(
                     label: Text("filter.all"),
                     isSelected: viewModel.selectedPerformers.isEmpty
@@ -206,7 +195,7 @@ struct LiveListView: View {
                     viewModel.clearPerformerFilter()
                 }
 
-                ForEach(performers.prefix(visibleCount), id: \.self) { performer in
+                ForEach(visiblePerformers, id: \.self) { performer in
                     filterButton(
                         label: Text(verbatim: performer),
                         isSelected: viewModel.selectedPerformers.contains(performer)
@@ -221,19 +210,10 @@ struct LiveListView: View {
                     } label: {
                         Text("+\(overflowCount)")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(
-                                performers.dropFirst(visibleCount).contains {
-                                    viewModel.selectedPerformers.contains($0)
-                                } ? Color.accentColor : Color.primary
-                            )
+                            .foregroundStyle(.primary)
                             .padding(.horizontal, 11)
                             .frame(height: 32)
-                            .background(
-                                performers.dropFirst(visibleCount).contains {
-                                    viewModel.selectedPerformers.contains($0)
-                                } ? Color.accentColor.opacity(0.16) : Color.secondary.opacity(0.1),
-                                in: Capsule()
-                            )
+                            .background(Color.secondary.opacity(0.1), in: Capsule())
                     }
                     .frame(minWidth: 44, minHeight: 44)
                     .buttonStyle(.plain)
@@ -241,8 +221,13 @@ struct LiveListView: View {
                     .accessibilityLabel(Text("performer.show_more"))
                 }
             }
-            .fixedSize(horizontal: true, vertical: false)
             .padding(.vertical, 2)
+        }
+        .contentMargins(.horizontal, 16, for: .scrollContent)
+        .scrollIndicators(.hidden)
+        .defaultScrollAnchor(.leading)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text("filter.performers"))
     }
 
     private func filterButton(

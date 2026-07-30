@@ -80,6 +80,7 @@
     "home.attended" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "最近参加したライブ" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "最近参加" } } } },
     "home.next_live" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "次のライブまで" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "距离下一场 Live" } } } },
     "home.no_upcoming" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "予定されているライブはありません" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "暂无计划中的演出" } } } },
+    "home.other_events" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "その他のLive" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "其他Live" } } } },
     "home.selected_live_countdown" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "選択中のライブまで" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "距离当前选中的 Live" } } } },
     "home.sidebar" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "サイドバー" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "边栏" } } } },
     "home.upcoming" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "最近の予定" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "最近计划" } } } },

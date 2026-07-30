@@ -400,6 +400,32 @@ final class TicketDiveEventPageParserTests: XCTestCase {
         XCTAssertEqual(details.performers, ["chuLa", "TENRIN", "iLiFE!"])
     }
 
+    func testKeepsUnseparatedPerformerLinesWithinTheirSchedule() throws {
+        let sourceURL = try XCTUnwrap(URL(string: "https://ticketdive.com/event/multi-lineup"))
+        let html = """
+        <html><body>
+        <div>DAY1</div>
+        <div>日時2026/10/3(土)</div>
+        <div>出演</div>
+        <div>chuLa</div>
+        <div>Mirror,Mirror</div>
+        <div>選択する</div>
+        <div>DAY2</div>
+        <div>日時2026/10/4(日)</div>
+        <div>出演</div>
+        <div>TENRIN</div>
+        <div>iLiFE!</div>
+        <div>選択する</div>
+        </body></html>
+        """
+
+        let details = try XCTUnwrap(TicketDiveEventPageParser().parse(html: html, sourceURL: sourceURL))
+
+        XCTAssertEqual(details.scheduleOptions.count, 2)
+        XCTAssertEqual(details.scheduleOptions[0].performers, ["chuLa", "Mirror,Mirror"])
+        XCTAssertEqual(details.scheduleOptions[1].performers, ["TENRIN", "iLiFE!"])
+    }
+
     // MARK: - 9. Fetch failure with X post fallback
 
     private struct StubXOEmbedClient: XOEmbedFetching {

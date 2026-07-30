@@ -20,7 +20,10 @@ struct HomeDashboardView: View {
 
     private func content(now: Date) -> some View {
         let upcoming = LiveListViewModel.upcomingEvents(in: events, now: now)
-        let history = LiveListViewModel.historicalEvents(in: events)
+        let remaining = LiveListViewModel.supplementaryDashboardEvents(
+            in: events,
+            excluding: upcoming
+        )
 
         return LazyVStack(alignment: .leading, spacing: 28) {
             VStack(alignment: .leading, spacing: 16) {
@@ -34,10 +37,10 @@ struct HomeDashboardView: View {
                 }
             }
 
-            if !history.isEmpty {
+            if !remaining.isEmpty {
                 VStack(alignment: .leading, spacing: 14) {
-                    sectionTitle("home.attended", systemImage: "checkmark.seal")
-                    historicalEvents(history)
+                    sectionTitle("home.other_events", systemImage: "clock.arrow.circlepath")
+                    historicalEvents(remaining)
                 }
             }
         }
