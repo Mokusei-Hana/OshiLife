@@ -14,11 +14,15 @@ struct LiveListRowView: View {
             )
             .frame(width: 82)
             .clipShape(.rect(cornerRadius: DesignRadius.small))
-
-            VStack(alignment: .leading, spacing: 7) {
+            .overlay(alignment: .topLeading) {
                 if !event.scheduleLabel.isEmpty {
                     ScheduleBadge(label: event.scheduleLabel)
+                        .scaleEffect(0.88, anchor: .topLeading)
+                        .padding(5)
                 }
+            }
+
+            VStack(alignment: .leading, spacing: 7) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(event.title)
                         .font(.headline)

@@ -246,6 +246,37 @@ final class MultiDayEventSelectionTests: XCTestCase {
         XCTAssertEqual(viewModel.performers, ["chuLa"])
     }
 
+    func testScheduleWithoutCandidatesDoesNotShowPerformersFromOtherSchedules() throws {
+        let store = try makeStore()
+        let sourceURL = try XCTUnwrap(URL(string: "https://ticketdive.com/event/festival"))
+        let options = [
+            EventScheduleOption(
+                dayLabel: "DAY1",
+                date: try date(year: 2026, month: 8, day: 7),
+                performers: ["chuLa"]
+            ),
+            EventScheduleOption(
+                dayLabel: "DAY2",
+                date: try date(year: 2026, month: 8, day: 8),
+                performers: []
+            )
+        ]
+        let details = EventImportDetails(
+            title: "フェス",
+            date: options[0].date,
+            performers: ["chuLa"],
+            linkedURL: sourceURL,
+            scheduleOptions: options
+        )
+        let pending = PendingShareImport(sourceURL: sourceURL, authorName: "公式", eventDetails: details)
+        let viewModel = LiveEditorViewModel(store: store, pendingImport: pending)
+
+        viewModel.selectScheduleDay(options[1])
+
+        XCTAssertFalse(viewModel.performerSuggestions.contains("chuLa"))
+        XCTAssertTrue(viewModel.performers.isEmpty)
+    }
+
     func testSavingMultipleSchedulesCreatesIndependentEventsWithSharedSource() throws {
         let store = try makeStore()
         let sourceURL = try XCTUnwrap(URL(string: "https://x.com/official/status/42"))

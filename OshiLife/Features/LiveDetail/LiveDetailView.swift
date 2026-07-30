@@ -99,18 +99,21 @@ struct LiveDetailView: View {
                 aspectRatio: 4.0 / 5.0
             )
             .clipShape(.rect(cornerRadius: DesignRadius.large))
-            .overlay(alignment: .topTrailing) {
-                StatusBadge(status: event.status)
-                    .padding(16)
+            .overlay(alignment: .top) {
+                HStack(alignment: .top) {
+                    if !event.scheduleLabel.isEmpty {
+                        ScheduleBadge(label: event.scheduleLabel)
+                    }
+                    Spacer(minLength: 8)
+                    StatusBadge(status: event.status)
+                }
+                .padding(16)
             }
             .shadow(color: .black.opacity(0.16), radius: 18, y: 10)
             .frame(maxWidth: 520)
             .frame(maxWidth: .infinity, alignment: .center)
 
             VStack(alignment: .leading, spacing: 8) {
-                if !event.scheduleLabel.isEmpty {
-                    ScheduleBadge(label: event.scheduleLabel)
-                }
                 if !event.artistName.isEmpty {
                     Text(event.artistName)
                         .font(.headline)

@@ -12,13 +12,13 @@ struct ScheduleBadge: View {
             Image(systemName: "calendar.day.timeline.left")
         }
         .font(.caption.weight(.semibold))
-        .foregroundStyle(.tint)
+        .foregroundStyle(.primary)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(.regularMaterial, in: Capsule())
+        .background(.thickMaterial, in: Capsule())
         .overlay {
             Capsule()
-                .stroke(.tint.opacity(0.22), lineWidth: 1)
+                .stroke(.white.opacity(0.22), lineWidth: 1)
         }
         .accessibilityLabel(Text("schedule.badge \(label)"))
     }

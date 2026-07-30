@@ -13,15 +13,18 @@ struct HomeEventCarouselCard: View {
                 height: 310
             )
             .clipShape(.rect(cornerRadius: DesignRadius.large))
-            .overlay(alignment: .topTrailing) {
-                StatusBadge(status: event.status)
-                    .padding(14)
+            .overlay(alignment: .top) {
+                HStack(alignment: .top) {
+                    if !event.scheduleLabel.isEmpty {
+                        ScheduleBadge(label: event.scheduleLabel)
+                    }
+                    Spacer(minLength: 8)
+                    StatusBadge(status: event.status)
+                }
+                .padding(14)
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                if !event.scheduleLabel.isEmpty {
-                    ScheduleBadge(label: event.scheduleLabel)
-                }
                 if !event.artistName.isEmpty {
                     Text(event.artistName)
                         .font(.subheadline.weight(.semibold))
@@ -47,7 +50,7 @@ struct HomeEventCarouselCard: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.top, 28)
+            .padding(.top, 16)
             .padding(.bottom, 16)
             .frame(maxWidth: .infinity, minHeight: 154, alignment: .topLeading)
         }

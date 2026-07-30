@@ -13,6 +13,12 @@ struct PerformerPickerView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    TextField("performer.search", text: $searchText)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+
                 if !viewModel.performerSuggestions.isEmpty {
                     Section("performer.suggestions") {
                         TagFlowLayout(spacing: 8) {
@@ -55,7 +61,6 @@ struct PerformerPickerView: View {
             }
             .navigationTitle("field.performers")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText, prompt: "performer.search")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("common.done") {

@@ -20,6 +20,7 @@ struct LiveListView: View {
     @State private var manualImportDraft: PendingShareImport?
     @State private var path: [UUID] = []
     @State private var focusedEventID: UUID?
+    @State private var showsPerformerFilters = false
 
     init(
         liveStore: LiveStore,
@@ -102,7 +103,12 @@ struct LiveListView: View {
             .interactiveDismissDisabled()
         }
 
-        return importContent.alert("common.error", isPresented: Binding(
+        let performerFilterContent = importContent.sheet(isPresented: $showsPerformerFilters) {
+            PerformerFilterSheet(viewModel: viewModel)
+                .presentationDetents([.medium, .large])
+        }
+
+        return performerFilterContent.alert("common.error", isPresented: Binding(
             get: { viewModel.errorMessage != nil || importCoordinator.errorMessage != nil },
             set: { if !$0 { viewModel.errorMessage = nil; importCoordinator.errorMessage = nil } }
         )) {
@@ -172,8 +178,27 @@ struct LiveListView: View {
     }
 
     private func performerFilter(viewModel: LiveListViewModel) -> some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 8) {
+        ViewThatFits(in: .horizontal) {
+            performerFilterRow(viewModel: viewModel, visiblePerformerCount: nil)
+            performerFilterRow(viewModel: viewModel, visiblePerformerCount: 4)
+            performerFilterRow(viewModel: viewModel, visiblePerformerCount: 3)
+            performerFilterRow(viewModel: viewModel, visiblePerformerCount: 2)
+            performerFilterRow(viewModel: viewModel, visiblePerformerCount: 1)
+        }
+        .padding(.horizontal, 16)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text("filter.performers"))
+    }
+
+    private func performerFilterRow(
+        viewModel: LiveListViewModel,
+        visiblePerformerCount: Int?
+    ) -> some View {
+        let performers = viewModel.availablePerformers
+        let visibleCount = min(visiblePerformerCount ?? performers.count, performers.count)
+        let overflowCount = performers.count - visibleCount
+
+        return HStack(spacing: 8) {
                 filterButton(
                     label: Text("filter.all"),
                     isSelected: viewModel.selectedPerformers.isEmpty
@@ -181,7 +206,7 @@ struct LiveListView: View {
                     viewModel.clearPerformerFilter()
                 }
 
-                ForEach(viewModel.availablePerformers, id: \.self) { performer in
+                ForEach(performers.prefix(visibleCount), id: \.self) { performer in
                     filterButton(
                         label: Text(verbatim: performer),
                         isSelected: viewModel.selectedPerformers.contains(performer)
@@ -189,13 +214,35 @@ struct LiveListView: View {
                         viewModel.togglePerformer(performer)
                     }
                 }
+
+                if overflowCount > 0 {
+                    Button {
+                        showsPerformerFilters = true
+                    } label: {
+                        Text("+\(overflowCount)")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(
+                                performers.dropFirst(visibleCount).contains {
+                                    viewModel.selectedPerformers.contains($0)
+                                } ? Color.accentColor : Color.primary
+                            )
+                            .padding(.horizontal, 11)
+                            .frame(height: 32)
+                            .background(
+                                performers.dropFirst(visibleCount).contains {
+                                    viewModel.selectedPerformers.contains($0)
+                                } ? Color.accentColor.opacity(0.16) : Color.secondary.opacity(0.1),
+                                in: Capsule()
+                            )
+                    }
+                    .frame(minWidth: 44, minHeight: 44)
+                    .buttonStyle(.plain)
+                    .contentShape(Capsule())
+                    .accessibilityLabel(Text("performer.show_more"))
+                }
             }
+            .fixedSize(horizontal: true, vertical: false)
             .padding(.vertical, 2)
-        }
-        .contentMargins(.horizontal, 16, for: .scrollContent)
-        .scrollIndicators(.hidden)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("filter.performers"))
     }
 
     private func filterButton(
@@ -351,5 +398,77 @@ struct LiveListView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
             .glassEffect(.regular.tint(.orange.opacity(0.12)), in: .rect(cornerRadius: 16))
+    }
+}
+
+private struct PerformerFilterSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var viewModel: LiveListViewModel
+    @State private var searchText = ""
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    TextField("performer.search", text: $searchText)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+
+                Section("filter.performers") {
+                    Button {
+                        viewModel.clearPerformerFilter()
+                    } label: {
+                        filterRow(
+                            title: String(localized: "filter.all"),
+                            isSelected: viewModel.selectedPerformers.isEmpty
+                        )
+                    }
+
+                    ForEach(filteredPerformers, id: \.self) { performer in
+                        Button {
+                            viewModel.togglePerformer(performer)
+                        } label: {
+                            filterRow(
+                                title: performer,
+                                isSelected: viewModel.selectedPerformers.contains(performer)
+                            )
+                        }
+                    }
+                }
+            }
+            .navigationTitle("filter.performers")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("common.done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    private var filteredPerformers: [String] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return viewModel.availablePerformers }
+        return viewModel.availablePerformers.filter {
+            $0.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    private func filterRow(title: String, isSelected: Bool) -> some View {
+        HStack {
+            Text(title)
+                .foregroundStyle(.primary)
+            Spacer()
+            if isSelected {
+                Image(systemName: "checkmark")
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.tint)
+            }
+        }
+        .contentShape(Rectangle())
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

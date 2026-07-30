@@ -154,6 +154,7 @@
     "schedule.add_participation" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "この日程に参加" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "参加此日程" } } } },
     "schedule.badge %@" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "日程：%@" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "日程：%@" } } } },
     "schedule.editing" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "編集中" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在编辑" } } } },
+    "schedule.participation" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "参加日程" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "参加日程" } } } },
     "schedule.remove_participation" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "この日程への参加を解除" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消参加此日程" } } } },
     "status.attended" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "参戦済み" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已参加" } } } },
     "status.cancelled" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "中止" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已取消" } } } },

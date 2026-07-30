@@ -147,13 +147,15 @@ final class LiveEditorViewModel {
     var isEditing: Bool { existingEvent != nil }
     var existingCoverPath: String? { existingEvent?.coverImagePath }
     var performerSuggestions: [String] {
-        let activeScheduleCandidates = activeScheduleOptionID
-            .flatMap { activeID in scheduleOptions.first { $0.id == activeID } }
-            .map(\.performers)
-            ?? []
-        let scheduleCandidates = activeScheduleCandidates.isEmpty
-            ? importedPerformerSuggestions
-            : activeScheduleCandidates
+        let scheduleCandidates: [String]
+        if scheduleOptions.count > 1 {
+            scheduleCandidates = activeScheduleOptionID
+                .flatMap { activeID in scheduleOptions.first { $0.id == activeID } }
+                .map(\.performers)
+                ?? []
+        } else {
+            scheduleCandidates = importedPerformerSuggestions
+        }
         return Self.normalizedPerformers(
             performers + scheduleCandidates + savedPerformerSuggestions
         )
