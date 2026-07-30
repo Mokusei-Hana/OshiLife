@@ -30,10 +30,16 @@ struct LiveDetailView: View {
                 infoSection
 
                 if !event.performers.isEmpty {
-                    detailSection("field.performers") {
+                    detailSection("detail.selected_performers") {
                         Text(event.performers.joined(separator: " / "))
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .textSelection(.enabled)
+                    }
+                }
+
+                if !event.performerCandidates.isEmpty {
+                    detailSection("detail.official_lineup") {
+                        OfficialLineupView(performers: event.performerCandidates)
                     }
                 }
 
@@ -325,5 +331,66 @@ struct LiveDetailView: View {
         } catch {
             mapError = error.localizedDescription
         }
+    }
+}
+
+private struct OfficialLineupView: View {
+    let performers: [String]
+
+    @State private var isExpanded = false
+
+    private let collapsedLineLimit = 3
+    private let collapsedPerformerLimit = 6
+    private let collapsedCharacterLimit = 120
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(displayedLineupText)
+                .lineLimit(isExpanded ? nil : collapsedLineLimit)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .textSelection(.enabled)
+
+            if requiresCollapse {
+                Button {
+                    withAnimation(.snappy) {
+                        isExpanded.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(LocalizedStringKey(
+                            isExpanded ? "detail.lineup.show_less" : "detail.lineup.show_more"
+                        ))
+                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.tint)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityValue(
+                    Text(LocalizedStringKey(
+                        isExpanded ? "detail.lineup.expanded" : "detail.lineup.collapsed"
+                    ))
+                )
+            }
+        }
+    }
+
+    private var lineupText: String {
+        performers.joined(separator: " / ")
+    }
+
+    private var displayedLineupText: String {
+        guard !isExpanded, performers.count > collapsedPerformerLimit else {
+            return lineupText
+        }
+        return performers.prefix(collapsedPerformerLimit).joined(separator: " / ") + "…"
+    }
+
+    private var requiresCollapse: Bool {
+        performers.count > collapsedPerformerLimit
+            || lineupText.count > collapsedCharacterLimit
     }
 }
