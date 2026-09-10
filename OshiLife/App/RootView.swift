@@ -33,6 +33,7 @@ struct RootView: View {
             startupWarning: startupWarning
         )
         .environment(settings)
+        .tint(EventPresentation.accent)
         .preferredColorScheme(settings.appearance.colorScheme)
     }
 }

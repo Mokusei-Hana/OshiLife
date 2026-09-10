@@ -32,37 +32,76 @@ final class ShareViewController: UIViewController {
     }
 
     private func configureUI() {
-        view.backgroundColor = .systemBackground
-        preferredContentSize = CGSize(width: 420, height: 250)
+        let paper = UIColor { $0.userInterfaceStyle == .dark
+            ? UIColor(red: 0.075, green: 0.08, blue: 0.085, alpha: 1)
+            : UIColor(red: 0.96, green: 0.945, blue: 0.915, alpha: 1) }
+        let accent = UIColor(red: 0.73, green: 0.20, blue: 0.12, alpha: 1)
+        view.backgroundColor = paper
+        view.tintColor = accent
+        preferredContentSize = CGSize(width: 420, height: 360)
+
+        let emblem = UIImageView(image: UIImage(systemName: "waveform"))
+        emblem.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 48, weight: .ultraLight)
+        emblem.tintColor = accent
+        emblem.contentMode = .scaleAspectFit
+        emblem.isAccessibilityElement = false
 
         titleLabel.text = String(localized: "share.title")
-        titleLabel.font = .preferredFont(forTextStyle: .title2)
+        let descriptor = UIFontDescriptor.preferredFontDescriptor(withTextStyle: .largeTitle)
+        titleLabel.font = UIFont(descriptor: descriptor.withDesign(.serif) ?? descriptor, size: 0)
         titleLabel.adjustsFontForContentSizeCategory = true
-        titleLabel.textAlignment = .center
+        titleLabel.textAlignment = .left
+        titleLabel.numberOfLines = 0
+        titleLabel.accessibilityTraits.insert(.header)
 
         messageLabel.text = String(localized: "share.processing")
         messageLabel.font = .preferredFont(forTextStyle: .body)
         messageLabel.adjustsFontForContentSizeCategory = true
-        messageLabel.textAlignment = .center
+        messageLabel.textColor = .secondaryLabel
+        messageLabel.textAlignment = .left
         messageLabel.numberOfLines = 0
 
+        spinner.color = accent
         spinner.startAnimating()
         actionButton.isHidden = true
-        actionButton.configuration = .borderedProminent()
+        var configuration = UIButton.Configuration.filled()
+        configuration.baseBackgroundColor = accent
+        configuration.baseForegroundColor = .white
+        configuration.cornerStyle = .large
+        configuration.contentInsets = NSDirectionalEdgeInsets(top: 16, leading: 24, bottom: 16, trailing: 24)
+        actionButton.configuration = configuration
+        actionButton.titleLabel?.adjustsFontForContentSizeCategory = true
         actionButton.addTarget(self, action: #selector(finish), for: .touchUpInside)
 
-        let stack = UIStackView(arrangedSubviews: [titleLabel, spinner, messageLabel, actionButton])
+        let masthead = UIStackView(arrangedSubviews: [emblem, UIView(), spinner])
+        masthead.axis = .horizontal
+        masthead.alignment = .center
+        let rule = UIView()
+        rule.backgroundColor = .separator
+        rule.heightAnchor.constraint(equalToConstant: 1).isActive = true
+        let stack = UIStackView(arrangedSubviews: [masthead, titleLabel, rule, messageLabel, actionButton])
         stack.axis = .vertical
-        stack.alignment = .center
-        stack.spacing = 18
+        stack.alignment = .fill
+        stack.spacing = 24
         stack.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(stack)
 
+        let scroll = UIScrollView()
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(scroll)
+        scroll.addSubview(stack)
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: view.layoutMarginsGuide.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: view.layoutMarginsGuide.trailingAnchor),
-            stack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            actionButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 140)
+            scroll.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            scroll.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            scroll.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            scroll.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            stack.leadingAnchor.constraint(equalTo: scroll.contentLayoutGuide.leadingAnchor, constant: 28),
+            stack.trailingAnchor.constraint(equalTo: scroll.contentLayoutGuide.trailingAnchor, constant: -28),
+            stack.topAnchor.constraint(equalTo: scroll.contentLayoutGuide.topAnchor, constant: 28),
+            stack.bottomAnchor.constraint(equalTo: scroll.contentLayoutGuide.bottomAnchor, constant: -28),
+            stack.widthAnchor.constraint(equalTo: scroll.frameLayoutGuide.widthAnchor, constant: -56),
+            emblem.heightAnchor.constraint(equalToConstant: 56),
+            emblem.widthAnchor.constraint(equalToConstant: 64),
+            actionButton.heightAnchor.constraint(greaterThanOrEqualToConstant: 52)
         ])
     }
 

@@ -1,42 +1,48 @@
 import SwiftUI
 
-/// A full-width event spread: identity first, artwork second, itinerary last.
 struct HomeEventCarouselCard: View {
     let event: LiveEvent
     let imageStore: ImageStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            VStack(alignment: .leading, spacing: 8) {
-                StatusBadge(status: event.status)
-                if !event.artistName.isEmpty {
-                    Text(event.artistName)
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 0) {
+            CoverImageView(relativePath: event.coverImagePath, imageStore: imageStore, height: 250)
+                .overlay(alignment: .topLeading) {
+                    StatusBadge(status: event.status)
+                        .padding(16)
                 }
-                Text(event.title)
-                    .font(.largeTitle.bold())
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            CoverImageView(relativePath: event.coverImagePath, imageStore: imageStore, height: 280)
-                .clipShape(.rect(cornerRadius: EventPresentation.cornerRadius))
-
-            HStack(alignment: .top, spacing: 20) {
-                EventDateStamp(date: event.eventDate)
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(event.eventDate, format: .dateTime.year().month().day())
-                        .font(.subheadline.weight(.medium))
-                    if !event.venue.isEmpty {
-                        Label(event.venue, systemImage: "mappin")
-                            .font(.headline)
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 6) {
+                    if !event.artistName.isEmpty {
+                        Text(event.artistName).font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
                     }
-                    EventSchedule(openTime: event.openTime, startTime: event.startTime)
+                    Text(event.title)
+                        .font(.system(.title, design: .serif).weight(.bold))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                TicketRule()
+                HStack(alignment: .top, spacing: 16) {
+                    EventDateStamp(date: event.eventDate)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(event.eventDate, format: .dateTime.year().month().day())
+                            .font(.caption).foregroundStyle(.secondary)
+                        if !event.venue.isEmpty {
+                            Label(event.venue, systemImage: "mappin.and.ellipse").font(.subheadline.weight(.semibold))
+                        }
+                        EventSchedule(openTime: event.openTime, startTime: event.startTime)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
+            .padding(20)
         }
         .foregroundStyle(.primary)
+        .background(EventPresentation.surface)
+        .clipShape(.rect(cornerRadius: EventPresentation.cornerRadius))
+        .overlay {
+            RoundedRectangle(cornerRadius: EventPresentation.cornerRadius)
+                .strokeBorder(EventPresentation.rule, lineWidth: 1)
+        }
         .contentShape(.rect)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("eventCard")
@@ -48,20 +54,24 @@ struct HistoricalEventCard: View {
     let imageStore: ImageStore
 
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            CoverImageView(relativePath: event.coverImagePath, imageStore: imageStore, height: 72)
-                .frame(width: 60)
-                .clipShape(.rect(cornerRadius: 8))
-            VStack(alignment: .leading, spacing: 5) {
-                Text(event.title).font(.headline).lineLimit(2)
-                Text(event.artistName).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
+        HStack(alignment: .top, spacing: 14) {
+            CoverImageView(relativePath: event.coverImagePath, imageStore: imageStore, height: 88)
+                .frame(width: 68)
+                .clipShape(.rect(cornerRadius: 10))
+            VStack(alignment: .leading, spacing: 6) {
                 Text(event.eventDate, format: .dateTime.year().month().day())
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption.monospaced()).foregroundStyle(EventPresentation.accent)
+                Text(event.title).font(.headline).fixedSize(horizontal: false, vertical: true)
+                if !event.artistName.isEmpty {
+                    Text(event.artistName).font(.subheadline).foregroundStyle(.secondary)
+                }
+                StatusBadge(status: event.status)
             }
             Spacer(minLength: 0)
-            Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+            Image(systemName: "arrow.up.right").font(.caption).foregroundStyle(.secondary)
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, 8)
+        .foregroundStyle(.primary)
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("historicalEventCard")

@@ -11,18 +11,28 @@ struct ManualXImportView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 32) {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Image(systemName: "square.and.arrow.down")
-                            .font(.system(.largeTitle, design: .rounded).weight(.light))
-                            .foregroundStyle(.tint)
-                            .accessibilityHidden(true)
-                        Text("manual_import.title").font(.largeTitle.bold())
+                VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        HStack {
+                            Image(systemName: "link")
+                                .font(.largeTitle.weight(.light))
+                            Spacer()
+                            Image(systemName: "arrow.down.right")
+                                .font(.largeTitle.weight(.ultraLight))
+                        }
+                        .foregroundStyle(Color(red: 1, green: 0.64, blue: 0.48))
+                        .accessibilityHidden(true)
+                        Text("manual_import.title")
+                            .font(.system(.largeTitle, design: .serif).weight(.bold))
                         Text("manual_import.message")
                             .font(.body)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.8))
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                    .padding(24)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .foregroundStyle(.white)
+                    .background(EventPresentation.ink, in: .rect(cornerRadius: 24))
 
                     VStack(alignment: .leading, spacing: 12) {
                         Text("manual_import.url.label").font(.headline)
@@ -35,16 +45,18 @@ struct ManualXImportView: View {
                                 .autocorrectionDisabled()
                                 .lineLimit(3...6)
                                 .focused($urlFocused)
+                                .accessibilityIdentifier("manualImportURLField")
                                 .onChange(of: viewModel.urlString) { _, _ in
                                     viewModel.errorMessage = nil
                                 }
                         }
                         .padding(20)
-                        .background(Color(uiColor: .secondarySystemBackground), in: .rect(cornerRadius: 16))
+                        .background(EventPresentation.background, in: .rect(cornerRadius: 12))
                         if let error = viewModel.errorMessage {
                             InlineNotice(message: error)
                         }
                     }
+                    .journalSurface()
 
                     if let suggestion = viewModel.clipboardSuggestion {
                         EventSection(title: "manual_import.clipboard.title") {
@@ -70,10 +82,11 @@ struct ManualXImportView: View {
                         .accessibilityElement(children: .combine)
                     }
                 }
-                .padding(28)
+                .padding(EventPresentation.inset)
                 .frame(maxWidth: 600)
                 .frame(maxWidth: .infinity)
             }
+            .background(EventPresentation.background)
             .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .bottom) {
                 Button {
@@ -90,13 +103,13 @@ struct ManualXImportView: View {
                     .font(.headline)
                     .padding(.vertical, 8)
                 }
-                .buttonStyle(.glassProminent)
+                .buttonStyle(JournalButtonStyle())
                 .controlSize(.large)
                 .disabled(!viewModel.canImport)
                 .accessibilityIdentifier("manualXImportButton")
                 .padding(.horizontal, 24)
                 .padding(.vertical, 12)
-                .background(.bar)
+                .background(EventPresentation.background)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -106,6 +119,7 @@ struct ManualXImportView: View {
             }
             .task { viewModel.checkClipboard(text: UIPasteboard.general.string) }
         }
+        .tint(EventPresentation.accent)
         .presentationDragIndicator(.visible)
     }
 }

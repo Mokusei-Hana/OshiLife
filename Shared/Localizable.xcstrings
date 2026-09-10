@@ -1,6 +1,13 @@
 {
   "sourceLanguage" : "ja",
   "strings" : {
+    "detail.actions" : {"localizations": {"ja": {"stringUnit": {"state": "translated", "value": "ライブの操作"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "演出操作"}}}} ,
+    "journal.collection" : {"localizations": {"ja": {"stringUnit": {"state": "translated", "value": "ライブ手帖"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "演出手帐"}}}} ,
+    "journal.other_events" : {"localizations": {"ja": {"stringUnit": {"state": "translated", "value": "そのほかのライブ"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "其他演出"}}}} ,
+    "journal.event_count %lld" : {"localizations": {"ja": {"stringUnit": {"state": "translated", "value": "%lld件のライブ"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "%lld场演出"}}}} ,
+    "journal.countdown.days %lld %lld" : {"localizations": {"ja": {"stringUnit": {"state": "translated", "value": "%1$lld日 %2$lld時間"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "%1$lld天 %2$lld小时"}}}} ,
+    "journal.countdown.hours %lld %lld" : {"localizations": {"ja": {"stringUnit": {"state": "translated", "value": "%1$lld時間 %2$lld分"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "%1$lld小时 %2$lld分钟"}}}} ,
+    "journal.countdown.minutes %lld" : {"localizations": {"ja": {"stringUnit": {"state": "translated", "value": "%lld分"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "%lld分钟"}}}} ,
     "app.name" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "OshiLife" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "OshiLife" } } } },
     "card.accessibility %@ %@" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "%1$@、%2$@のライブ" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%1$@，%2$@的演出" } } } },
     "common.cancel" : { "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "キャンセル" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消" } } } },

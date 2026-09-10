@@ -9,34 +9,35 @@ struct VenuePickerView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                if search.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    VStack(alignment: .leading, spacing: 18) {
-                        Image(systemName: "map")
-                            .font(.system(size: 48, weight: .ultraLight))
-                            .foregroundStyle(.tint)
-                            .accessibilityHidden(true)
-                        Text("venue.search.prompt.title").font(.title2.bold())
-                        Text("venue.search.prompt.message").foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 32)
-                    .listRowSeparator(.hidden)
-                } else if search.suggestions.isEmpty, search.errorMessage == nil {
-                    ContentUnavailableView.search(text: search.query)
-                        .listRowSeparator(.hidden)
-                } else {
-                    Section {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 16) {
+                    if search.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        VStack(alignment: .leading, spacing: 20) {
+                            Image(systemName: "mappin.and.ellipse")
+                                .font(.system(size: 64, weight: .ultraLight))
+                                .foregroundStyle(EventPresentation.accent)
+                                .accessibilityHidden(true)
+                            Text("venue.search.prompt.title")
+                                .font(.system(.title, design: .serif).weight(.bold))
+                            Text("venue.search.prompt.message").foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 24)
+                        .journalSurface()
+                    } else if search.suggestions.isEmpty, search.errorMessage == nil {
+                        ContentUnavailableView.search(text: search.query)
+                    } else {
+                        JournalHeading(title: "venue.picker.title", symbol: "map")
                         ForEach(Array(search.suggestions.enumerated()), id: \.offset) { _, suggestion in
                             suggestionButton(suggestion)
+                                .journalSurface()
                         }
-                    } header: {
-                        Label("venue.picker.title", systemImage: "mappin.and.ellipse")
-                            .textCase(nil)
                     }
                 }
+                .padding(EventPresentation.inset)
+                .frame(maxWidth: 700)
+                .frame(maxWidth: .infinity)
             }
-            .listStyle(.plain)
-            .contentMargins(.horizontal, 8)
+            .background(EventPresentation.background)
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("venue.picker.title")
             .navigationBarTitleDisplayMode(.large)
@@ -54,7 +55,7 @@ struct VenuePickerView: View {
                         Text("common.loading").font(.subheadline.weight(.medium))
                     }
                     .padding(18)
-                    .glassEffect(.regular, in: .capsule)
+                    .background(EventPresentation.surface, in: .rect(cornerRadius: 16))
                     .padding()
                 }
             }
@@ -67,6 +68,7 @@ struct VenuePickerView: View {
                 Text(search.errorMessage ?? "")
             }
         }
+        .tint(EventPresentation.accent)
         .presentationDragIndicator(.visible)
     }
 
@@ -84,7 +86,7 @@ struct VenuePickerView: View {
                     .font(.title3)
                     .foregroundStyle(.tint)
                     .frame(width: 40, height: 40)
-                    .background(Color(uiColor: .secondarySystemBackground), in: .circle)
+                    .background(EventPresentation.accent.opacity(0.08), in: .rect(cornerRadius: 12))
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 6) {
                     Text(suggestion.title).font(.headline).foregroundStyle(.primary)
@@ -93,7 +95,7 @@ struct VenuePickerView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: "plus.circle")
+                Image(systemName: "arrow.up.right")
                     .font(.title3)
                     .foregroundStyle(.tint)
                     .accessibilityHidden(true)

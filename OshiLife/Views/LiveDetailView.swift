@@ -12,10 +12,18 @@ struct LiveDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 32) {
-                identity
-                CoverImageView(relativePath: event.coverImagePath, imageStore: imageStore, height: 340)
-                    .clipShape(.rect(cornerRadius: 16))
+            VStack(alignment: .leading, spacing: 20) {
+                concertPass
+                if let url = event.ticketURL {
+                    Link(destination: url) {
+                        HStack {
+                            Label("detail.ticket", systemImage: "ticket")
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                        }
+                    }
+                    .buttonStyle(JournalButtonStyle())
+                }
                 itinerary
                 if !event.performers.isEmpty {
                     EventSection(title: "field.performers") {
@@ -55,17 +63,17 @@ struct LiveDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("common.edit", systemImage: "pencil", action: onEdit)
+                    .accessibilityIdentifier("editLiveButton")
             }
-            ToolbarItem(placement: .bottomBar) {
-                StatusBadge(status: event.status)
-            }
-            ToolbarItem(placement: .bottomBar) {
-                Spacer()
-            }
-            ToolbarItem(placement: .bottomBar) {
-                Button("common.delete", systemImage: "trash", role: .destructive) {
-                    confirmsDelete = true
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button("common.delete", systemImage: "trash", role: .destructive) {
+                        confirmsDelete = true
+                    }
+                } label: {
+                    Label("detail.actions", systemImage: "ellipsis")
                 }
+                .accessibilityIdentifier("liveActionsMenu")
             }
         }
         .confirmationDialog("delete.title", isPresented: $confirmsDelete, titleVisibility: .visible) {
@@ -93,18 +101,38 @@ struct LiveDetailView: View {
         }
     }
 
-    private var identity: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if !event.artistName.isEmpty {
-                Text(event.artistName)
-                    .font(.title3.weight(.medium))
-                    .foregroundStyle(.secondary)
+    private var concertPass: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            CoverImageView(relativePath: event.coverImagePath, imageStore: imageStore, height: 320)
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .top) {
+                    StatusBadge(status: event.status)
+                    Spacer()
+                    Image(systemName: "waveform").font(.title2)
+                        .foregroundStyle(EventPresentation.accent).accessibilityHidden(true)
+                }
+                if !event.artistName.isEmpty {
+                    Text(event.artistName)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+                Text(event.title)
+                    .font(.system(.largeTitle, design: .serif).weight(.bold))
+                    .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
+                TicketRule()
+                Text(event.eventDate, format: .dateTime.year().month(.wide).day().weekday(.wide))
+                    .font(.subheadline.monospaced())
+                    .foregroundStyle(EventPresentation.accent)
             }
-            Text(event.title)
-                .font(.largeTitle.bold())
-                .fixedSize(horizontal: false, vertical: true)
-                .textSelection(.enabled)
+            .padding(24)
+        }
+        .background(EventPresentation.surface)
+        .clipShape(.rect(cornerRadius: EventPresentation.cornerRadius))
+        .overlay {
+            RoundedRectangle(cornerRadius: EventPresentation.cornerRadius)
+                .strokeBorder(EventPresentation.rule, lineWidth: 1)
         }
     }
 
@@ -120,12 +148,14 @@ struct LiveDetailView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             if !mapQuery.isEmpty {
-                Divider()
+                TicketRule()
                 Button { showsMapOptions = true } label: {
                     HStack(alignment: .top, spacing: 16) {
-                        Image(systemName: "location.circle.fill")
-                            .font(.largeTitle)
-                            .foregroundStyle(.tint)
+                        Image(systemName: "mappin.and.ellipse")
+                            .font(.title2)
+                            .foregroundStyle(EventPresentation.accent)
+                            .padding(12)
+                            .background(EventPresentation.background, in: .rect(cornerRadius: 12))
                         VStack(alignment: .leading, spacing: 6) {
                             if !event.venue.isEmpty {
                                 Text(event.venue).font(.headline).foregroundStyle(.primary)
@@ -158,12 +188,12 @@ struct LiveDetailView: View {
                     ticketRow(selected, selected: true)
                 }
                 .padding(20)
-                .background(Color(uiColor: .secondarySystemBackground), in: .rect(cornerRadius: 16))
+                .background(EventPresentation.accent.opacity(0.08), in: .rect(cornerRadius: 16))
             }
             Text("detail.available_tickets").font(.subheadline).foregroundStyle(.secondary)
             ForEach(event.ticketOptions) { option in
                 ticketRow(option)
-                Divider()
+                TicketRule()
             }
         }
     }

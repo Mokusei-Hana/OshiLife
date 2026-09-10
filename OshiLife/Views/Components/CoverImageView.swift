@@ -10,7 +10,7 @@ struct CoverImageView: View {
 
     var body: some View {
         Rectangle()
-            .fill(Color(uiColor: .secondarySystemBackground))
+            .fill(EventPresentation.ink)
             .modifier(CoverImageSize(height: height, aspectRatio: aspectRatio))
             .overlay {
                 if let image {
@@ -21,10 +21,17 @@ struct CoverImageView: View {
                             .frame(width: geometry.size.width, height: geometry.size.height)
                     }
                 } else {
-                    Image(systemName: "music.mic")
-                        .font(.system(size: 36, weight: .ultraLight))
-                        .foregroundStyle(.tertiary)
-                        .accessibilityHidden(true)
+                    ZStack {
+                        ForEach(0..<5) { index in
+                            Circle()
+                                .stroke(.white.opacity(0.08), lineWidth: 1)
+                                .frame(width: CGFloat(100 + index * 70), height: CGFloat(100 + index * 70))
+                        }
+                        Image(systemName: "waveform")
+                            .font(.system(size: 52, weight: .ultraLight))
+                            .foregroundStyle(Color(red: 0.98, green: 0.58, blue: 0.40))
+                    }
+                    .accessibilityHidden(true)
                 }
             }
             .clipped()

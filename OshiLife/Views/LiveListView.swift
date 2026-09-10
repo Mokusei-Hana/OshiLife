@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 private struct EditorRoute: Identifiable {
     let id = UUID()
@@ -136,20 +135,36 @@ struct LiveListView: View {
         return NavigationStack(path: $path) {
             Group {
                 if viewModel.isLoading && viewModel.events.isEmpty {
-                    VStack(spacing: 20) {
-                        Image(systemName: "calendar").font(.largeTitle).foregroundStyle(.secondary)
+                    VStack(spacing: 24) {
+                        Image(systemName: "waveform")
+                            .font(.system(size: 60, weight: .ultraLight))
+                            .foregroundStyle(EventPresentation.accent)
+                            .accessibilityHidden(true)
                         ProgressView("common.loading")
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if viewModel.filteredEvents.isEmpty {
-                    ContentUnavailableView {
-                        Label("list.empty.title", systemImage: "calendar.badge.plus")
-                    } description: {
-                        Text("list.empty.message")
-                    } actions: {
-                        Button("live.add") { editorRoute = EditorRoute(event: nil) }
-                            .buttonStyle(.glassProminent)
-                            .accessibilityIdentifier("addLiveButton")
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 24) {
+                            Image(systemName: "ticket")
+                                .font(.system(size: 72, weight: .ultraLight))
+                                .foregroundStyle(EventPresentation.accent)
+                                .padding(.top, 24)
+                                .accessibilityHidden(true)
+                            Text("list.empty.title")
+                                .font(.system(.largeTitle, design: .serif).weight(.bold))
+                            TicketRule()
+                            Text("list.empty.message")
+                                .font(.body).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Button("live.add") { editorRoute = EditorRoute(event: nil) }
+                                .buttonStyle(JournalButtonStyle())
+                                .accessibilityIdentifier("addLiveButton")
+                        }
+                        .journalSurface()
+                        .padding(EventPresentation.inset)
+                        .frame(maxWidth: 600)
+                        .frame(maxWidth: .infinity)
                     }
                 } else {
                     eventContent(viewModel.filteredEvents)
@@ -159,36 +174,61 @@ struct LiveListView: View {
             .background(EventPresentation.background)
             .navigationTitle("app.name")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    filterMenu(selection: $viewModel.filter)
-                }
-                ToolbarItemGroup(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
                         SettingsView(settings: settings)
                     } label: {
-                        Label("settings.title", systemImage: "gearshape")
+                        Label("settings.title", systemImage: "slider.horizontal.3")
                     }
                     .accessibilityIdentifier("settingsButton")
                 }
-                ToolbarItemGroup(placement: .bottomBar) {
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                HStack(spacing: 12) {
+                    filterMenu(selection: $viewModel.filter)
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
                     displayModeMenu
-                    Spacer()
-                    Button("manual_import.title", systemImage: "square.and.arrow.down") {
-                        showsManualImport = true
-                    }
-                    .accessibilityIdentifier("manualXImportEntryButton")
-                    Spacer()
-                    Button("live.add", systemImage: "plus") {
-                        editorRoute = EditorRoute(event: nil)
-                    }
-                    .buttonStyle(.glassProminent)
-                    .accessibilityIdentifier("addLiveButton")
+                        .frame(minWidth: 44, minHeight: 44)
                 }
+                .padding(.horizontal, EventPresentation.inset)
+                .background(EventPresentation.background)
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { creationActions }
+                    VStack(spacing: 10) { creationActions }
+                }
+                .padding(.horizontal, EventPresentation.inset)
+                .padding(.vertical, 12)
+                .background(EventPresentation.background)
             }
             .navigationDestination(for: UUID.self) { id in
                 eventDestination(id: id, viewModel: viewModel)
             }
         }
+    }
+
+    @ViewBuilder private var creationActions: some View {
+        Button {
+            showsManualImport = true
+        } label: {
+            Label("manual_import.title", systemImage: "square.and.arrow.down")
+                .font(.subheadline.weight(.semibold))
+                .padding(.vertical, 16)
+                .frame(maxWidth: .infinity)
+                .background(EventPresentation.surface, in: .rect(cornerRadius: 16))
+                .overlay { RoundedRectangle(cornerRadius: 16).strokeBorder(EventPresentation.rule) }
+        }
+        .accessibilityIdentifier("manualXImportEntryButton")
+        Button {
+            editorRoute = EditorRoute(event: nil)
+        } label: {
+            Label("live.add", systemImage: "plus")
+        }
+        .buttonStyle(JournalButtonStyle())
+        .accessibilityIdentifier("addLiveButton")
     }
 
     private var displayModeMenu: some View {
@@ -200,7 +240,8 @@ struct LiveListView: View {
                 }
             }
         } label: {
-            Image(systemName: displayMode.systemImage)
+            Label(displayMode.title, systemImage: displayMode.systemImage)
+                .font(.subheadline.weight(.semibold))
         }
         .accessibilityLabel(Text("display_mode.title"))
         .accessibilityValue(Text(displayMode.title))
@@ -254,22 +295,27 @@ struct LiveListView: View {
         let months = Dictionary(grouping: events) {
             Calendar.current.dateInterval(of: .month, for: $0.eventDate)?.start ?? $0.eventDate
         }
-        return List {
-            ForEach(months.keys.sorted(), id: \.self) { month in
-                Section {
-                    ForEach(months[month] ?? []) { event in
-                        eventLink(event) { LiveListRowView(event: event) }
+        return ScrollView {
+            LazyVStack(alignment: .leading, spacing: 24) {
+                ForEach(months.keys.sorted(), id: \.self) { month in
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text(month, format: .dateTime.year().month(.wide))
+                            .font(.system(.title2, design: .serif).weight(.bold))
+                            .accessibilityAddTraits(.isHeader)
+                        VStack(spacing: 14) {
+                            ForEach(months[month] ?? []) { event in
+                                eventLink(event) { LiveListRowView(event: event) }
+                                if event.id != months[month]?.last?.id { TicketRule() }
+                            }
+                        }
+                        .journalSurface()
                     }
-                } header: {
-                    Text(month, format: .dateTime.year().month(.wide))
-                        .font(.title2.bold())
-                        .foregroundStyle(.primary)
-                        .textCase(nil)
                 }
             }
+            .padding(EventPresentation.inset)
+            .frame(maxWidth: 760)
+            .frame(maxWidth: .infinity)
         }
-        .listStyle(.plain)
-        .contentMargins(.horizontal, 8)
     }
 
     private func homeContent(_ events: [LiveEvent]) -> some View {
@@ -286,8 +332,23 @@ struct LiveListView: View {
             .filter { $0.status == .attended }
             .sorted { $0.eventDate > $1.eventDate }
 
+        let upcomingIDs = Set(upcoming.map(\.id))
+        let remaining = events
+            .filter { !upcomingIDs.contains($0.id) && $0.status != .attended }
+            .sorted { $0.eventDate > $1.eventDate }
+
         return ScrollView {
-            VStack(alignment: .leading, spacing: 36) {
+            VStack(alignment: .leading, spacing: 24) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("journal.collection")
+                        .font(.system(.largeTitle, design: .serif).weight(.bold))
+                    Spacer()
+                    Text(events.count, format: .number)
+                        .font(.title2.monospacedDigit())
+                        .foregroundStyle(EventPresentation.accent)
+                        .accessibilityLabel(Text("journal.event_count \(events.count)"))
+                }
+                .padding(.horizontal, EventPresentation.inset)
                 if upcoming.isEmpty {
                     ContentUnavailableView("home.no_upcoming", systemImage: "calendar")
                 } else {
@@ -304,6 +365,14 @@ struct LiveListView: View {
                         }
                         .padding(.horizontal, EventPresentation.inset)
                     }
+                }
+                if !remaining.isEmpty {
+                    EventSection(title: "journal.other_events") {
+                        ForEach(remaining) { event in
+                            eventLink(event) { LiveListRowView(event: event) }
+                        }
+                    }
+                    .padding(.horizontal, EventPresentation.inset)
                 }
                 if !history.isEmpty {
                     EventSection(title: "home.attended") {
@@ -417,10 +486,18 @@ struct LiveListView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                 Text(countdownText(until: event.eventDate, now: now))
-                    .font(.system(.largeTitle, design: .rounded).weight(.light))
+                    .font(.system(.largeTitle, design: .monospaced).weight(.bold))
                     .monospacedDigit()
                     .foregroundStyle(.tint)
                     .contentTransition(.numericText())
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(EventPresentation.accent.opacity(0.08), in: .rect(cornerRadius: 20))
+            .overlay(alignment: .trailing) {
+                Image(systemName: "sparkle")
+                    .font(.largeTitle).foregroundStyle(EventPresentation.accent.opacity(0.2))
+                    .padding(24).accessibilityHidden(true)
             }
             .accessibilityElement(children: .combine)
         }
@@ -431,36 +508,35 @@ struct LiveListView: View {
         let days = seconds / 86_400
         let hours = (seconds % 86_400) / 3_600
         let minutes = (seconds % 3_600) / 60
-        if days > 0 { return "\(days)d \(hours)h" }
-        if hours > 0 { return "\(hours)h \(minutes)m" }
-        return "\(minutes)m"
+        if days > 0 { return String(localized: "journal.countdown.days \(days) \(hours)") }
+        if hours > 0 { return String(localized: "journal.countdown.hours \(hours) \(minutes)") }
+        return String(localized: "journal.countdown.minutes \(minutes)")
     }
 
     private func warningBanner(_ message: String) -> some View {
         InlineNotice(message: message)
-            .padding(.horizontal, 16)
-            .background(.regularMaterial)
+            .background(EventPresentation.background)
     }
 }
 
-private struct CarouselPageIndicator: UIViewRepresentable {
+private struct CarouselPageIndicator: View {
     let numberOfPages: Int
     let currentPage: Int
 
-    func makeUIView(context: Context) -> UIPageControl {
-        let pageControl = UIPageControl()
-        pageControl.backgroundStyle = .minimal
-        pageControl.hidesForSinglePage = true
-        pageControl.allowsContinuousInteraction = false
-        pageControl.isUserInteractionEnabled = false
-        pageControl.isAccessibilityElement = false
-        pageControl.currentPageIndicatorTintColor = .label.withAlphaComponent(0.72)
-        pageControl.pageIndicatorTintColor = .secondaryLabel.withAlphaComponent(0.28)
-        return pageControl
-    }
-
-    func updateUIView(_ pageControl: UIPageControl, context: Context) {
-        pageControl.numberOfPages = numberOfPages
-        pageControl.currentPage = currentPage
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(verbatim: "\(currentPage + 1) / \(numberOfPages)")
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+            GeometryReader { geometry in
+                Capsule().fill(EventPresentation.rule)
+                    .overlay(alignment: .leading) {
+                        Capsule().fill(EventPresentation.accent)
+                            .frame(width: geometry.size.width * CGFloat(currentPage + 1) / CGFloat(max(1, numberOfPages)))
+                    }
+            }
+            .frame(width: 72, height: 3)
+        }
+        .accessibilityHidden(true)
     }
 }

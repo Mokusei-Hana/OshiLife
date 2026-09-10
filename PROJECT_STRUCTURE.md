@@ -2,7 +2,7 @@
 
 ## 1. Tech Stack & Architecture
 
-OshiLife is a native **iOS 26+ Swift 6** application, not a Flutter/Dart project. UI is **SwiftUI** (plus UIKit for the Share Extension and `UIPageControl`), state uses Apple's **Observation** framework (`@Observable`, `@State`, `@Bindable`, environment injection), and persistence uses **SwiftData** plus App Group files and `UserDefaults`. There are no third-party package dependencies in the Xcode project.
+OshiLife is a native **iOS 26+ Swift 6** application, not a Flutter/Dart project. UI is **SwiftUI** (plus UIKit for the Share Extension), state uses Apple's **Observation** framework (`@Observable`, `@State`, `@Bindable`, environment injection), and persistence uses **SwiftData** plus App Group files and `UserDefaults`. There are no third-party package dependencies in the Xcode project.
 
 | Concern | Implementation |
 |---|---|
@@ -55,7 +55,7 @@ OshiLife is a native **iOS 26+ Swift 6** application, not a Flutter/Dart project
 
 | Screen | Path |
 |---|---|
-| Home/card carousel and live list | `OshiLife/Views/LiveListView.swift` |
+| Concert journal/card collection and monthly agenda | `OshiLife/Views/LiveListView.swift` |
 | Live detail | `OshiLife/Views/LiveDetailView.swift` |
 | Create/edit/import editor | `OshiLife/Views/LiveEditorView.swift` |
 | Manual X URL import | `OshiLife/Views/ManualXImportView.swift` |
@@ -65,11 +65,11 @@ OshiLife is a native **iOS 26+ Swift 6** application, not a Flutter/Dart project
 
 ## 4. Presentation Layer
 
-- `LiveListView` composes `HomeEventCarouselCard`/`HistoricalEventCard` in card mode and `LiveListRowView` in list mode. It also contains the countdown, carousel state, toolbar/filter menus, and presentation routing.
+- `LiveListView` composes concert-pass cards and archive rows in collection mode, and date-stamped rows grouped by month in agenda mode. Collection mode includes upcoming, attended, and all remaining events (including cancelled and past planned events). It retains the countdown, carousel focus, display preference, filter menus, and presentation routing; its page indicator is native SwiftUI.
 - `LiveDetailView` renders the cover, schedule, venue/map actions, performers, ticket options, notes, external links, and delete confirmation.
-- `LiveEditorView` is a form used by `LiveEditorHost` and `ImportEditorHost`; it binds directly to `LiveEditorViewModel`, uses PhotosUI, and presents `VenuePickerView` as a sheet.
+- `LiveEditorView` is a scrollable concert workspace used by `LiveEditorHost` and `ImportEditorHost`; paper panels contain identity, status, schedule, and location. Adaptive destination tiles open performers, ticket selection, links, and notes pages. It retains direct `LiveEditorViewModel` bindings, PhotosUI, and the `VenuePickerView` sheet.
 - Shared UI: `CoverImageView` loads stored cover images/fallback artwork; `StatusBadge` visualizes `LiveStatus`; `LiveCardView` is an alternate card component but is not currently referenced by the main list.
-- Design is local SwiftUI styling (`glassEffect`, materials, system fonts/colors, rounded shapes). There is no centralized theme/token module; the asset catalog supplies `AccentColor`.
+- Design tokens and reusable journal surfaces, buttons, headings, date stamps, dashed dividers, and notices live in `Views/Components/EventPresentation.swift`. The concert journal uses dynamic warm paper/ink surfaces, vermilion accents, serif display type, and monospaced schedule details. `RootView` installs its tint. The Share Extension mirrors the palette locally because it is a separate target. See `UI_REDESIGN.md` for design and validation details.
 - Dialogs/sheets are declared inline in `LiveListView`, `LiveDetailView`, `LiveEditorView`/hosts, and `VenuePickerView`; there is no separate dialog layer.
 
 ## 5. State & Business Logic
