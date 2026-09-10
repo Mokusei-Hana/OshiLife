@@ -94,189 +94,49 @@ struct LiveEditorView: View {
 
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var showsVenuePicker = false
+    @State private var showsCalendar = false
 
     var body: some View {
         NavigationStack {
             Form {
-                if let duplicate {
-                    Section {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Label("import.duplicate.title", systemImage: "doc.on.doc.fill")
-                                .font(.headline)
-                            Text("import.duplicate.message \(duplicate.title)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                            Button("import.duplicate.open") { onOpenDuplicate?() }
-                                .buttonStyle(.borderless)
-                        }
-                        .padding(.vertical, 4)
+                importNotices
+                identity
+                schedule
+                location
+                Section {
+                    NavigationLink {
+                        performersEditor
+                    } label: {
+                        editorDestination("field.performers", symbol: "person.2", value: viewModel.performersText)
                     }
-                }
-
-                if let warning = viewModel.importWarning {
-                    Section {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Label(warning, systemImage: "exclamationmark.triangle")
-                                .foregroundStyle(.orange)
-                            Button {
-                                Task { await viewModel.retryImportMetadata() }
-                            } label: {
-                                if viewModel.isRetryingMetadata {
-                                    ProgressView()
-                                } else {
-                                    Label("import.retry", systemImage: "arrow.clockwise")
-                                }
-                            }
-                            .disabled(viewModel.isRetryingMetadata)
-                        }
-                    }
-                }
-
-                coverSection
-
-                Section("editor.basic") {
-                    TextField("field.artist", text: $viewModel.artistName)
-                        .textContentType(.organizationName)
-                    TextField("field.title", text: $viewModel.title, axis: .vertical)
-                        .lineLimit(1...3)
-                    Picker("field.status", selection: $viewModel.status) {
-                        ForEach(LiveStatus.allCases) { status in
-                            Label(status.localizedName, systemImage: status.systemImage).tag(status)
-                        }
-                    }
-                }
-
-                Section("field.performers") {
-                    TextField("field.performers", text: $viewModel.performersText, axis: .vertical)
-                        .lineLimit(2...6)
-                }
-
-                Section("editor.schedule") {
-                    if let eventDate = viewModel.eventDate {
-                        DatePicker(
-                            "field.date",
-                            selection: Binding(
-                                get: { eventDate },
-                                set: { viewModel.eventDate = $0 }
-                            ),
-                            displayedComponents: .date
-                        )
-                        Button("field.date.clear", role: .destructive) { viewModel.eventDate = nil }
-                    } else {
-                        Button("field.date.choose", systemImage: "calendar.badge.plus") {
-                            viewModel.eventDate = .now
-                        }
-                    }
-                    Toggle("field.open_time.enabled", isOn: $viewModel.hasOpenTime)
-                    if viewModel.hasOpenTime {
-                        DatePicker("field.open_time", selection: $viewModel.openTime, displayedComponents: .hourAndMinute)
-                    }
-                    Toggle("field.start_time.enabled", isOn: $viewModel.hasStartTime)
-                    if viewModel.hasStartTime {
-                        DatePicker("field.start_time", selection: $viewModel.startTime, displayedComponents: .hourAndMinute)
-                    }
-                }
-
-                Section("editor.location") {
-                    if viewModel.venue.isEmpty && viewModel.address.isEmpty {
-                        Button {
-                            showsVenuePicker = true
+                    if !viewModel.ticketOptions.isEmpty {
+                        NavigationLink {
+                            ticketEditor
                         } label: {
-                            Label("venue.choose", systemImage: "map.fill")
-                        }
-                        .buttonStyle(.borderless)
-                    } else {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Label {
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(viewModel.venue)
-                                        .font(.headline)
-                                    if !viewModel.address.isEmpty {
-                                        Text(viewModel.address)
-                                            .font(.subheadline)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                            } icon: {
-                                Image(systemName: "mappin.and.ellipse")
-                                    .foregroundStyle(.tint)
-                            }
-
-                            HStack {
-                                Button("venue.change", systemImage: "map") {
-                                    showsVenuePicker = true
-                                }
-                                .buttonStyle(.borderless)
-                                Button("venue.clear", systemImage: "xmark", role: .destructive) {
-                                    viewModel.clearVenue()
-                                }
-                                .buttonStyle(.borderless)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
-
-                if !viewModel.ticketOptions.isEmpty {
-                    Section("editor.tickets") {
-                        Picker("field.selected_ticket", selection: $viewModel.selectedTicketID) {
-                            Text("ticket.none").tag(UUID?.none)
-                            ForEach(viewModel.ticketOptions) { option in
-                                Text(ticketLabel(option)).tag(Optional(option.id))
-                            }
-                        }
-                        ForEach(viewModel.ticketOptions) { option in
-                            LabeledContent {
-                                VStack(alignment: .trailing, spacing: 2) {
-                                    if let price = option.price {
-                                        Text("¥\(price.formatted())")
-                                            .monospacedDigit()
-                                    }
-                                    if let description = option.description, !description.isEmpty {
-                                        Text(description)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                            } label: {
-                                Text(option.name)
-                            }
+                            Label("editor.tickets", systemImage: "ticket")
                         }
                     }
-                }
-
-                Section("editor.links") {
-                    TextField("field.ticket_url", text: $viewModel.ticketURLString)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    if !viewModel.ticketURLString.isEmpty, LiveEvent.validHTTPURL(viewModel.ticketURLString) == nil {
-                        validationLabel("validation.ticket_url")
+                    NavigationLink {
+                        linksEditor
+                    } label: {
+                        Label("editor.links", systemImage: "link")
                     }
-                    TextField("field.source_url", text: $viewModel.sourceURLString)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    if !viewModel.sourceURLString.isEmpty, LiveEvent.validHTTPURL(viewModel.sourceURLString) == nil {
-                        validationLabel("validation.source_url")
+                    NavigationLink {
+                        notesEditor
+                    } label: {
+                        editorDestination("field.notes", symbol: "text.alignleft", value: viewModel.notes)
                     }
+                } header: {
+                    Text("detail.information")
                 }
-
-                Section("field.notes") {
-                    TextEditor(text: $viewModel.notes)
-                        .frame(minHeight: 140)
-                }
-
                 if !viewModel.validationMessages.isEmpty {
                     Section("validation.title") {
                         ForEach(viewModel.validationMessages, id: \.self) { message in
-                            Label(message, systemImage: "exclamationmark.circle")
-                                .foregroundStyle(.red)
+                            InlineNotice(message: message)
                         }
                     }
                 }
             }
-            .formStyle(.grouped)
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle(viewModel.isEditing ? "editor.edit_title" : "editor.new_title")
             .navigationBarTitleDisplayMode(.inline)
@@ -301,37 +161,58 @@ struct LiveEditorView: View {
                 Text(viewModel.errorMessage ?? "")
             }
             .sheet(isPresented: $showsVenuePicker) {
-                VenuePickerView { selection in
-                    viewModel.selectVenue(selection)
-                }
+                VenuePickerView { viewModel.selectVenue($0) }
             }
         }
         .presentationDragIndicator(.visible)
     }
 
-    private func ticketLabel(_ option: TicketOption) -> String {
-        guard let price = option.price else { return option.name }
-        return "\(option.name) ¥\(price.formatted())"
+    @ViewBuilder private var importNotices: some View {
+        if let duplicate {
+            Section {
+                Label("import.duplicate.title", systemImage: "doc.on.doc")
+                    .font(.headline)
+                Text("import.duplicate.message \(duplicate.title)")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                Button("import.duplicate.open") { onOpenDuplicate?() }
+            }
+        }
+        if let warning = viewModel.importWarning {
+            Section {
+                InlineNotice(message: warning)
+                Button {
+                    Task { await viewModel.retryImportMetadata() }
+                } label: {
+                    HStack {
+                        Label("import.retry", systemImage: "arrow.clockwise")
+                        Spacer()
+                        if viewModel.isRetryingMetadata { ProgressView() }
+                    }
+                }
+                .disabled(viewModel.isRetryingMetadata)
+            }
+        }
     }
 
-    private var coverSection: some View {
-        Section("field.cover") {
-            Group {
-                if let data = viewModel.coverImageData, let image = UIImage(data: data) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(height: 220)
-                        .frame(maxWidth: .infinity)
-                        .clipShape(.rect(cornerRadius: 18))
-                } else if !viewModel.removesExistingCover, viewModel.existingCoverPath != nil {
-                    CoverImageView(relativePath: viewModel.existingCoverPath, imageStore: imageStore, height: 220)
-                        .clipShape(.rect(cornerRadius: 18))
+    private var identity: some View {
+        Section {
+            HStack(alignment: .top, spacing: 16) {
+                cover
+                    .frame(width: 88, height: 112)
+                    .clipShape(.rect(cornerRadius: 12))
+                    .accessibilityLabel(Text("field.cover"))
+                VStack(alignment: .leading, spacing: 12) {
+                    TextField("field.title", text: $viewModel.title, axis: .vertical)
+                        .font(.title2.bold())
+                        .lineLimit(2...5)
+                    TextField("field.artist", text: $viewModel.artistName)
+                        .textContentType(.organizationName)
+                        .font(.subheadline)
                 }
             }
-
+            .padding(.vertical, 12)
             PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                Label("cover.choose", systemImage: "photo.on.rectangle")
+                Label("cover.choose", systemImage: "photo.badge.plus")
             }
             .onChange(of: selectedPhoto) { _, item in
                 Task {
@@ -341,7 +222,6 @@ struct LiveEditorView: View {
                     }
                 }
             }
-
             if viewModel.coverImageData != nil || (!viewModel.removesExistingCover && viewModel.existingCoverPath != nil) {
                 Button("cover.remove", role: .destructive) {
                     viewModel.coverImageData = nil
@@ -349,7 +229,173 @@ struct LiveEditorView: View {
                     selectedPhoto = nil
                 }
             }
+            Picker("field.status", selection: $viewModel.status) {
+                ForEach(LiveStatus.allCases) { status in
+                    Label(status.localizedName, systemImage: status.systemImage).tag(status)
+                }
+            }
         }
+    }
+
+    @ViewBuilder private var cover: some View {
+        if let data = viewModel.coverImageData, let image = UIImage(data: data) {
+            Image(uiImage: image).resizable().scaledToFill()
+        } else {
+            CoverImageView(
+                relativePath: viewModel.removesExistingCover ? nil : viewModel.existingCoverPath,
+                imageStore: imageStore,
+                height: 112
+            )
+        }
+    }
+
+    private var schedule: some View {
+        Section("editor.schedule") {
+            if let eventDate = viewModel.eventDate {
+                DisclosureGroup(isExpanded: $showsCalendar) {
+                    DatePicker("field.date", selection: Binding(
+                        get: { eventDate },
+                        set: { viewModel.eventDate = $0 }
+                    ), displayedComponents: .date)
+                    .datePickerStyle(.graphical)
+                    Button("field.date.clear", role: .destructive) { viewModel.eventDate = nil }
+                } label: {
+                    LabeledContent {
+                        Text(eventDate, format: .dateTime.year().month().day())
+                    } label: {
+                        Label("field.date", systemImage: "calendar")
+                    }
+                }
+            } else {
+                Button("field.date.choose", systemImage: "calendar.badge.plus") {
+                    viewModel.eventDate = .now
+                    showsCalendar = true
+                }
+            }
+            Toggle("field.open_time.enabled", isOn: $viewModel.hasOpenTime)
+            if viewModel.hasOpenTime {
+                DatePicker("field.open_time", selection: $viewModel.openTime, displayedComponents: .hourAndMinute)
+            }
+            Toggle("field.start_time.enabled", isOn: $viewModel.hasStartTime)
+            if viewModel.hasStartTime {
+                DatePicker("field.start_time", selection: $viewModel.startTime, displayedComponents: .hourAndMinute)
+            }
+        }
+    }
+
+    private var location: some View {
+        Section("editor.location") {
+            Button { showsVenuePicker = true } label: {
+                HStack(spacing: 16) {
+                    Image(systemName: "location.circle").font(.title)
+                    VStack(alignment: .leading, spacing: 4) {
+                        if viewModel.venue.isEmpty && viewModel.address.isEmpty {
+                            Text("venue.choose")
+                        } else {
+                            Text(viewModel.venue).foregroundStyle(.primary)
+                            if !viewModel.address.isEmpty {
+                                Text(viewModel.address).font(.caption).foregroundStyle(.secondary)
+                            }
+                            Text("venue.change").font(.caption)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right").font(.caption)
+                }
+                .padding(.vertical, 8)
+            }
+            if !viewModel.venue.isEmpty || !viewModel.address.isEmpty {
+                Button("venue.clear", role: .destructive) { viewModel.clearVenue() }
+            }
+        }
+    }
+
+    private var performersEditor: some View {
+        Form {
+            Section("field.performers") {
+                TextField("field.performers", text: $viewModel.performersText, axis: .vertical)
+                    .lineLimit(6...16)
+            }
+        }
+        .navigationTitle("field.performers")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var ticketEditor: some View {
+        Form {
+            Section("field.selected_ticket") {
+                Picker("field.selected_ticket", selection: $viewModel.selectedTicketID) {
+                    Text("ticket.none").tag(UUID?.none)
+                    ForEach(viewModel.ticketOptions) { option in
+                        Text(ticketLabel(option)).tag(Optional(option.id))
+                    }
+                }
+                .pickerStyle(.inline)
+            }
+            Section("detail.available_tickets") {
+                ForEach(viewModel.ticketOptions) { option in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(ticketLabel(option)).font(.headline)
+                        if let description = option.description, !description.isEmpty {
+                            Text(description).font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 6)
+                }
+            }
+        }
+        .navigationTitle("editor.tickets")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var linksEditor: some View {
+        Form {
+            Section("field.ticket_url") {
+                urlField("field.ticket_url", text: $viewModel.ticketURLString)
+                if !viewModel.ticketURLString.isEmpty, LiveEvent.validHTTPURL(viewModel.ticketURLString) == nil {
+                    validationLabel("validation.ticket_url")
+                }
+            }
+            Section("field.source_url") {
+                urlField("field.source_url", text: $viewModel.sourceURLString)
+                if !viewModel.sourceURLString.isEmpty, LiveEvent.validHTTPURL(viewModel.sourceURLString) == nil {
+                    validationLabel("validation.source_url")
+                }
+            }
+        }
+        .navigationTitle("editor.links")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var notesEditor: some View {
+        TextEditor(text: $viewModel.notes)
+            .padding(16)
+            .navigationTitle("field.notes")
+            .navigationBarTitleDisplayMode(.inline)
+            .accessibilityLabel(Text("field.notes"))
+    }
+
+    private func editorDestination(_ title: LocalizedStringKey, symbol: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(title, systemImage: symbol)
+            if !value.isEmpty {
+                Text(value).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func urlField(_ title: LocalizedStringKey, text: Binding<String>) -> some View {
+        TextField(title, text: text, axis: .vertical)
+            .keyboardType(.URL)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .lineLimit(2...5)
+    }
+
+    private func ticketLabel(_ option: TicketOption) -> String {
+        guard let price = option.price else { return option.name }
+        return "\(option.name) ¥\(price.formatted())"
     }
 
     private func validationLabel(_ key: LocalizedStringKey) -> some View {

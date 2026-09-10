@@ -9,32 +9,29 @@ struct CoverImageView: View {
     @State private var image: UIImage?
 
     var body: some View {
-        coverContent
-            .frame(maxWidth: .infinity)
+        Rectangle()
+            .fill(Color(uiColor: .secondarySystemBackground))
             .modifier(CoverImageSize(height: height, aspectRatio: aspectRatio))
+            .overlay {
+                if let image {
+                    GeometryReader { geometry in
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                    }
+                } else {
+                    Image(systemName: "music.mic")
+                        .font(.system(size: 36, weight: .ultraLight))
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
+                }
+            }
             .clipped()
             .task(id: relativePath) {
                 image = imageStore.image(at: relativePath)
             }
             .accessibilityLabel(relativePath == nil ? Text("cover.placeholder") : Text("cover.image"))
-    }
-
-    private var coverContent: some View {
-        Group {
-            if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                ZStack {
-                    Color(uiColor: .tertiarySystemGroupedBackground)
-                    Image(systemName: "music.note.list")
-                        .font(.system(size: 42, weight: .light))
-                        .foregroundStyle(.secondary)
-                        .accessibilityHidden(true)
-                }
-            }
-        }
     }
 }
 
@@ -45,7 +42,7 @@ private struct CoverImageSize: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if let aspectRatio {
-            content.aspectRatio(aspectRatio, contentMode: .fill)
+            content.aspectRatio(aspectRatio, contentMode: .fit)
         } else {
             content.frame(height: height)
         }

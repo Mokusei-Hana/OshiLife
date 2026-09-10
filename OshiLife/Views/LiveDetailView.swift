@@ -12,50 +12,35 @@ struct LiveDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                eventHeader
-
-                infoSection
-
+            VStack(alignment: .leading, spacing: 32) {
+                identity
+                CoverImageView(relativePath: event.coverImagePath, imageStore: imageStore, height: 340)
+                    .clipShape(.rect(cornerRadius: 16))
+                itinerary
                 if !event.performers.isEmpty {
-                    detailSection("field.performers") {
-                        Text(event.performers.joined(separator: " / "))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .textSelection(.enabled)
+                    EventSection(title: "field.performers") {
+                        ForEach(Array(event.performers.enumerated()), id: \.offset) { _, performer in
+                            Label(performer, systemImage: "person")
+                                .font(.body)
+                                .textSelection(.enabled)
+                        }
                     }
                 }
-
-                if !event.ticketOptions.isEmpty {
-                    ticketSection
-                }
-
+                if !event.ticketOptions.isEmpty { tickets }
                 if !event.notes.isEmpty {
-                    detailSection("field.notes") {
+                    EventSection(title: "field.notes") {
                         Text(event.notes)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .lineSpacing(5)
                             .textSelection(.enabled)
                     }
                 }
-
                 if event.ticketURL != nil || event.sourceURL != nil {
-                    detailSection("detail.links") {
-                        GlassEffectContainer(spacing: 12) {
-                            VStack(spacing: 12) {
-                                if let ticketURL = event.ticketURL {
-                                    Link(destination: ticketURL) {
-                                        Label("detail.ticket", systemImage: "ticket")
-                                            .frame(maxWidth: .infinity)
-                                    }
-                                    .buttonStyle(.borderedProminent)
-                                }
-                                if let sourceURL = event.sourceURL {
-                                    Link(destination: sourceURL) {
-                                        Label("detail.source", systemImage: "link")
-                                            .frame(maxWidth: .infinity)
-                                    }
-                                    .buttonStyle(.bordered)
-                                }
-                            }
+                    EventSection(title: "detail.links") {
+                        if let url = event.ticketURL {
+                            externalLink("detail.ticket", symbol: "ticket", url: url)
+                        }
+                        if let url = event.sourceURL {
+                            externalLink("detail.source", symbol: "link", url: url)
                         }
                     }
                 }
@@ -68,14 +53,19 @@ struct LiveDetailView: View {
         .navigationTitle("detail.title")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 Button("common.edit", systemImage: "pencil", action: onEdit)
-                Menu {
-                    Button("common.delete", systemImage: "trash", role: .destructive) { confirmsDelete = true }
-                } label: {
-                    Image(systemName: "ellipsis")
+            }
+            ToolbarItem(placement: .bottomBar) {
+                StatusBadge(status: event.status)
+            }
+            ToolbarItem(placement: .bottomBar) {
+                Spacer()
+            }
+            ToolbarItem(placement: .bottomBar) {
+                Button("common.delete", systemImage: "trash", role: .destructive) {
+                    confirmsDelete = true
                 }
-                .accessibilityLabel(Text("detail.title"))
             }
         }
         .confirmationDialog("delete.title", isPresented: $confirmsDelete, titleVisibility: .visible) {
@@ -83,6 +73,15 @@ struct LiveDetailView: View {
             Button("common.cancel", role: .cancel) {}
         } message: {
             Text("delete.message")
+        }
+        .confirmationDialog("detail.open_maps", isPresented: $showsMapOptions, titleVisibility: .visible) {
+            Button { openMap(with: .apple) } label: {
+                Label("map.apple", systemImage: "apple.logo")
+            }
+            Button { openMap(with: .google) } label: {
+                Label("map.google", systemImage: "globe")
+            }
+            Button("common.cancel", role: .cancel) {}
         }
         .alert("common.error", isPresented: Binding(
             get: { mapError != nil },
@@ -94,206 +93,109 @@ struct LiveDetailView: View {
         }
     }
 
-    private var eventHeader: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            CoverImageView(
-                relativePath: event.coverImagePath,
-                imageStore: imageStore,
-                aspectRatio: 4.0 / 3.0
-            )
-            .clipShape(.rect(cornerRadius: 24))
-            .overlay(alignment: .topTrailing) {
-                StatusBadge(status: event.status)
-                    .padding(16)
-            }
-            .frame(maxWidth: 520)
-            .frame(maxWidth: .infinity, alignment: .center)
-
-            VStack(alignment: .leading, spacing: 8) {
-                if !event.artistName.isEmpty {
-                    Text(event.artistName)
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
-                }
-                Text(event.title)
-                    .font(.largeTitle.bold())
+    private var identity: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if !event.artistName.isEmpty {
+                Text(event.artistName)
+                    .font(.title3.weight(.medium))
+                    .foregroundStyle(.secondary)
                     .textSelection(.enabled)
             }
+            Text(event.title)
+                .font(.largeTitle.bold())
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var infoSection: some View {
-        detailSection("detail.information") {
-            VStack(alignment: .leading, spacing: 16) {
-                Label {
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text(event.eventDate, format: .dateTime.year().month().day().weekday())
-
-                        if event.openTime != nil || event.startTime != nil {
-                            HStack(alignment: .top, spacing: 16) {
-                                if let openTime = event.openTime {
-                                    timeDisplay(
-                                        title: "field.open_time",
-                                        time: openTime,
-                                        isProminent: false
-                                    )
-                                }
-                                if event.openTime != nil, event.startTime != nil {
-                                    Divider()
-                                }
-                                if let startTime = event.startTime {
-                                    timeDisplay(
-                                        title: "field.start_time",
-                                        time: startTime,
-                                        isProminent: true
-                                    )
-                                }
-                            }
-                        }
-                    }
-                } icon: {
-                    Image(systemName: "calendar")
+    private var itinerary: some View {
+        EventSection(title: "editor.schedule") {
+            HStack(alignment: .top, spacing: 24) {
+                EventDateStamp(date: event.eventDate)
+                VStack(alignment: .leading, spacing: 20) {
+                    Text(event.eventDate, format: .dateTime.year().month().day().weekday())
+                        .font(.headline)
+                    EventSchedule(openTime: event.openTime, startTime: event.startTime)
                 }
-
-                if !mapQuery.isEmpty {
-                    Divider()
-                    Button {
-                        showsMapOptions = true
-                    } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "mappin.and.ellipse")
-                                .frame(width: 20)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                if !event.venue.isEmpty {
-                                    Text(event.venue)
-                                        .foregroundStyle(.primary)
-                                }
-                                if !event.address.isEmpty {
-                                    Text(event.address)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-
-                            Spacer(minLength: 8)
-
-                            Image(systemName: "chevron.right")
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.tertiary)
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                        .contentShape(.rect)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityHint(Text("detail.open_maps"))
-                    .accessibilityIdentifier("venueMapButton")
-                    .confirmationDialog(
-                        "detail.open_maps",
-                        isPresented: $showsMapOptions,
-                        titleVisibility: .visible
-                    ) {
-                        Button {
-                            openMap(with: .apple)
-                        } label: {
-                            Label("map.apple", systemImage: "apple.logo")
-                        }
-                        Button {
-                            openMap(with: .google)
-                        } label: {
-                            Label("map.google", systemImage: "globe")
-                        }
-                        Button("common.cancel", role: .cancel) {}
-                    }
-                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-        }
-    }
-
-    private var ticketSection: some View {
-        detailSection("editor.tickets") {
-            VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("detail.available_tickets")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
-
-                    ForEach(Array(event.ticketOptions.enumerated()), id: \.element.id) { index, option in
-                        ticketRow(option)
-                        if index < event.ticketOptions.count - 1 {
-                            Divider()
-                        }
-                    }
-                }
-
-                if let selectedTicket = event.selectedTicket {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Label("field.selected_ticket", systemImage: "checkmark.circle.fill")
-                            .font(.subheadline.weight(.semibold))
+            if !mapQuery.isEmpty {
+                Divider()
+                Button { showsMapOptions = true } label: {
+                    HStack(alignment: .top, spacing: 16) {
+                        Image(systemName: "location.circle.fill")
+                            .font(.largeTitle)
                             .foregroundStyle(.tint)
-                        ticketRow(selectedTicket, isSelected: true)
+                        VStack(alignment: .leading, spacing: 6) {
+                            if !event.venue.isEmpty {
+                                Text(event.venue).font(.headline).foregroundStyle(.primary)
+                            }
+                            if !event.address.isEmpty {
+                                Text(event.address).font(.subheadline).foregroundStyle(.secondary)
+                            }
+                            Text("detail.open_maps").font(.subheadline.weight(.medium))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: "arrow.up.right").font(.subheadline)
                     }
-                    .padding(14)
-                    .background(.tint.opacity(0.12), in: .rect(cornerRadius: 14))
-
+                    .padding(.vertical, 8)
+                    .contentShape(.rect)
                 }
+                .buttonStyle(.plain)
+                .accessibilityHint(Text("detail.open_maps"))
+                .accessibilityIdentifier("venueMapButton")
             }
         }
     }
 
-    private func timeDisplay(
-        title: LocalizedStringKey,
-        time: Date,
-        isProminent: Bool
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.caption.weight(isProminent ? .bold : .semibold))
-                .foregroundStyle(isProminent ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-            Text(time, format: .dateTime.hour().minute())
-                .font(isProminent ? .title.bold() : .title2.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(isProminent ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
+    private var tickets: some View {
+        EventSection(title: "editor.tickets") {
+            if let selected = event.selectedTicket {
+                VStack(alignment: .leading, spacing: 16) {
+                    Label("field.selected_ticket", systemImage: "checkmark.seal.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tint)
+                    ticketRow(selected, selected: true)
+                }
+                .padding(20)
+                .background(Color(uiColor: .secondarySystemBackground), in: .rect(cornerRadius: 16))
+            }
+            Text("detail.available_tickets").font(.subheadline).foregroundStyle(.secondary)
+            ForEach(event.ticketOptions) { option in
+                ticketRow(option)
+                Divider()
+            }
         }
-        .frame(maxWidth: .infinity, minHeight: 62, alignment: .leading)
     }
 
-    private func ticketRow(_ option: TicketOption, isSelected: Bool = false) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(option.name)
-                    .font(.body.weight(isSelected ? .semibold : .medium))
-                if let description = option.description, !description.isEmpty {
-                    Text(description)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+    private func ticketRow(_ option: TicketOption, selected: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 16) {
+                Text(option.name).font(selected ? .title2.bold() : .headline)
+                Spacer(minLength: 0)
+                if let price = option.price {
+                    Text("¥\(price.formatted())")
+                        .font(selected ? .title2.weight(.medium) : .body)
+                        .monospacedDigit()
                 }
             }
-            Spacer(minLength: 8)
-            if let price = option.price {
-                Text("¥\(price.formatted())")
-                    .fontWeight(isSelected ? .bold : .regular)
-                    .monospacedDigit()
+            if let description = option.description, !description.isEmpty {
+                Text(description).font(.subheadline).foregroundStyle(.secondary)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .textSelection(.enabled)
     }
 
-    private func detailSection<Content: View>(
-        _ title: LocalizedStringKey,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(.secondary)
-            content()
+    private func externalLink(_ title: LocalizedStringKey, symbol: String, url: URL) -> some View {
+        Link(destination: url) {
+            HStack {
+                Label(title, systemImage: symbol)
+                Spacer()
+                Image(systemName: "arrow.up.right")
+            }
+            .font(.body.weight(.medium))
+            .padding(.vertical, 8)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .background(EventPresentation.surface, in: .rect(cornerRadius: 20))
     }
 
     private var mapQuery: String {
@@ -305,10 +207,7 @@ struct LiveDetailView: View {
     @MainActor
     private func openMap(with provider: MapProvider) {
         do {
-            try MapService().open(
-                provider: provider,
-                venue: mapQuery
-            )
+            try MapService().open(provider: provider, venue: mapQuery)
         } catch {
             mapError = error.localizedDescription
         }

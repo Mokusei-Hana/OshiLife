@@ -5,43 +5,23 @@ struct LiveCardView: View {
     let imageStore: ImageStore
 
     var body: some View {
-        HStack(spacing: 0) {
-            CoverImageView(
-                relativePath: event.coverImagePath,
-                imageStore: imageStore,
-                height: 132
-            )
-            .frame(width: 116)
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text(event.title)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-
-                Label {
-                    Text(event.eventDate, format: .dateTime.year().month().day().weekday())
-                } icon: {
-                    Image(systemName: "calendar")
-                }
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-
-                if !event.venue.isEmpty {
-                    Label(event.venue, systemImage: "mappin.and.ellipse")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 16) {
+                EventDateStamp(date: event.eventDate)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(event.artistName).font(.subheadline).foregroundStyle(.secondary)
+                    Text(event.title).font(.title2.bold())
+                    StatusBadge(status: event.status)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
+            CoverImageView(relativePath: event.coverImagePath, imageStore: imageStore, height: 200)
+                .clipShape(.rect(cornerRadius: 16))
+            if !event.venue.isEmpty {
+                Label(event.venue, systemImage: "mappin").font(.subheadline)
+            }
+            EventSchedule(openTime: event.openTime, startTime: event.startTime)
         }
-        .frame(minHeight: 132)
-        .clipShape(.rect(cornerRadius: 22))
-        .background(EventPresentation.surface, in: .rect(cornerRadius: 22))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("card.accessibility \(event.artistName) \(event.title)"))
         .accessibilityIdentifier("eventCard")
     }
 }

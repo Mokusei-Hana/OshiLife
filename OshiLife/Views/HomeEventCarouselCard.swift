@@ -1,63 +1,44 @@
 import SwiftUI
 
+/// A full-width event spread: identity first, artwork second, itinerary last.
 struct HomeEventCarouselCard: View {
     let event: LiveEvent
     let imageStore: ImageStore
-    let width: CGFloat
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            CoverImageView(
-                relativePath: event.coverImagePath,
-                imageStore: imageStore,
-                height: 240
-            )
-            .overlay(alignment: .topTrailing) {
+        VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 8) {
                 StatusBadge(status: event.status)
-                    .padding(14)
-            }
-
-            VStack(alignment: .leading, spacing: 10) {
                 if !event.artistName.isEmpty {
                     Text(event.artistName)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.headline)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
                 }
-
                 Text(event.title)
-                    .font(.title2.bold())
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
+                    .font(.largeTitle.bold())
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
-                Label {
-                    Text(event.eventDate, format: .dateTime.year().month().day().weekday())
-                } icon: {
-                    Image(systemName: "calendar")
-                }
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            CoverImageView(relativePath: event.coverImagePath, imageStore: imageStore, height: 280)
+                .clipShape(.rect(cornerRadius: EventPresentation.cornerRadius))
 
-                if !event.venue.isEmpty {
-                    Label(event.venue, systemImage: "mappin.and.ellipse")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                if event.openTime != nil || event.startTime != nil {
-                    Divider().padding(.vertical, 4)
+            HStack(alignment: .top, spacing: 20) {
+                EventDateStamp(date: event.eventDate)
+                VStack(alignment: .leading, spacing: 16) {
+                    Text(event.eventDate, format: .dateTime.year().month().day())
+                        .font(.subheadline.weight(.medium))
+                    if !event.venue.isEmpty {
+                        Label(event.venue, systemImage: "mappin")
+                            .font(.headline)
+                    }
                     EventSchedule(openTime: event.openTime, startTime: event.startTime)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal, EventPresentation.inset)
-            .padding(.top, 20)
-            .padding(.bottom, 16)
-            .frame(maxWidth: .infinity, minHeight: 154, alignment: .topLeading)
         }
-        .frame(width: width)
+        .foregroundStyle(.primary)
         .contentShape(.rect)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("card.accessibility \(event.artistName) \(event.title)"))
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("eventCard")
     }
 }
@@ -67,29 +48,22 @@ struct HistoricalEventCard: View {
     let imageStore: ImageStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            CoverImageView(
-                relativePath: event.coverImagePath,
-                imageStore: imageStore,
-                height: 112
-            )
-            .clipShape(.rect(cornerRadius: 12))
-
+        HStack(alignment: .center, spacing: 16) {
+            CoverImageView(relativePath: event.coverImagePath, imageStore: imageStore, height: 72)
+                .frame(width: 60)
+                .clipShape(.rect(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 5) {
-                Text(event.title)
-                    .font(.subheadline.bold())
-                    .lineLimit(1)
+                Text(event.title).font(.headline).lineLimit(2)
+                Text(event.artistName).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
                 Text(event.eventDate, format: .dateTime.year().month().day())
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(.secondary)
             }
-            .padding(.vertical, 12)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
         }
-        .frame(width: 208)
-
-        .contentShape(.rect(cornerRadius: 18))
+        .padding(.vertical, 12)
+        .contentShape(.rect)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("card.accessibility \(event.artistName) \(event.title)"))
         .accessibilityIdentifier("historicalEventCard")
     }
 }

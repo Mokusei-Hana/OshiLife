@@ -9,39 +9,53 @@ struct VenuePickerView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
+            List {
                 if search.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    ContentUnavailableView(
-                        "venue.search.prompt.title",
-                        systemImage: "mappin.and.ellipse",
-                        description: Text("venue.search.prompt.message")
-                    )
+                    VStack(alignment: .leading, spacing: 18) {
+                        Image(systemName: "map")
+                            .font(.system(size: 48, weight: .ultraLight))
+                            .foregroundStyle(.tint)
+                            .accessibilityHidden(true)
+                        Text("venue.search.prompt.title").font(.title2.bold())
+                        Text("venue.search.prompt.message").foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 32)
+                    .listRowSeparator(.hidden)
                 } else if search.suggestions.isEmpty, search.errorMessage == nil {
                     ContentUnavailableView.search(text: search.query)
+                        .listRowSeparator(.hidden)
                 } else {
-                    List {
+                    Section {
                         ForEach(Array(search.suggestions.enumerated()), id: \.offset) { _, suggestion in
                             suggestionButton(suggestion)
                         }
+                    } header: {
+                        Label("venue.picker.title", systemImage: "mappin.and.ellipse")
+                            .textCase(nil)
                     }
-                    .listStyle(.plain)
-                    .scrollDismissesKeyboard(.interactively)
                 }
             }
+            .listStyle(.plain)
+            .contentMargins(.horizontal, 8)
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("venue.picker.title")
-            .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $search.query, prompt: "venue.search.placeholder")
+            .navigationBarTitleDisplayMode(.large)
+            .searchable(text: $search.query, placement: .navigationBarDrawer(displayMode: .always), prompt: "venue.search.placeholder")
             .searchPresentationToolbarBehavior(.avoidHidingContent)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("common.cancel") { dismiss() }
                 }
             }
-            .overlay {
+            .safeAreaInset(edge: .bottom) {
                 if search.isResolving {
-                    ProgressView("common.loading")
-                        .padding(24)
-                        .glassEffect(.regular, in: .rect(cornerRadius: 20))
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text("common.loading").font(.subheadline.weight(.medium))
+                    }
+                    .padding(18)
+                    .glassEffect(.regular, in: .capsule)
+                    .padding()
                 }
             }
             .alert("common.error", isPresented: Binding(
@@ -65,27 +79,26 @@ struct VenuePickerView: View {
                 }
             }
         } label: {
-            HStack(spacing: 14) {
-                Image(systemName: "mappin.circle.fill")
-                    .font(.title2)
+            HStack(alignment: .top, spacing: 18) {
+                Image(systemName: "mappin")
+                    .font(.title3)
                     .foregroundStyle(.tint)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(suggestion.title)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(width: 40, height: 40)
+                    .background(Color(uiColor: .secondarySystemBackground), in: .circle)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(suggestion.title).font(.headline).foregroundStyle(.primary)
                     if !suggestion.subtitle.isEmpty {
-                        Text(suggestion.subtitle)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Text(suggestion.subtitle).font(.subheadline).foregroundStyle(.secondary)
                     }
                 }
-                Image(systemName: "chevron.right")
-                    .font(.caption.bold())
-                    .foregroundStyle(.tertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "plus.circle")
+                    .font(.title3)
+                    .foregroundStyle(.tint)
+                    .accessibilityHidden(true)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 12)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)

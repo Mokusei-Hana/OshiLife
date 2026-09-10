@@ -4,49 +4,37 @@ struct LiveListRowView: View {
     let event: LiveEvent
 
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
-            VStack(spacing: 2) {
-                Text(event.eventDate, format: .dateTime.month(.abbreviated))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tint)
-                Text(event.eventDate, format: .dateTime.day())
-                    .font(.title.bold())
-                    .monospacedDigit()
-            }
-            .frame(minWidth: 44)
-            .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 8) {
+        HStack(alignment: .top, spacing: 20) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(event.status.tint)
+                .frame(width: 3)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(event.eventDate, format: .dateTime.day().weekday(.abbreviated))
+                        .font(.title3.weight(.semibold))
+                    Spacer()
+                    if let start = event.startTime {
+                        Text(start, format: .dateTime.hour().minute())
+                            .font(.subheadline.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 if !event.artistName.isEmpty {
-                    Text(event.artistName)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    Text(event.artistName).font(.subheadline).foregroundStyle(.secondary)
                 }
-                Text(event.title)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-
-                Text(event.eventDate, format: .dateTime.year().month().day().weekday())
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-
+                Text(event.title).font(.headline).fixedSize(horizontal: false, vertical: true)
                 if !event.venue.isEmpty {
-                    Label(event.venue, systemImage: "mappin.and.ellipse")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                    Label(event.venue, systemImage: "mappin")
+                        .font(.footnote).foregroundStyle(.secondary)
                 }
-
                 StatusBadge(status: event.status)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, minHeight: 62, alignment: .leading)
         .padding(.vertical, 12)
+        .fixedSize(horizontal: false, vertical: true)
+        .contentShape(.rect)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("card.accessibility \(event.artistName) \(event.title)"))
         .accessibilityIdentifier("eventListRow")
     }
 }
