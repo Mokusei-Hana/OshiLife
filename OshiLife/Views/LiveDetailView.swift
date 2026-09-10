@@ -46,28 +46,36 @@ struct LiveDetailView: View {
                                         Label("detail.ticket", systemImage: "ticket")
                                             .frame(maxWidth: .infinity)
                                     }
-                                    .buttonStyle(.glassProminent)
+                                    .buttonStyle(.borderedProminent)
                                 }
                                 if let sourceURL = event.sourceURL {
                                     Link(destination: sourceURL) {
                                         Label("detail.source", systemImage: "link")
                                             .frame(maxWidth: .infinity)
                                     }
-                                    .buttonStyle(.glass)
+                                    .buttonStyle(.bordered)
                                 }
                             }
                         }
                     }
                 }
             }
-            .padding(18)
+            .padding(EventPresentation.inset)
+            .frame(maxWidth: 720)
+            .frame(maxWidth: .infinity)
         }
+        .background(EventPresentation.background)
         .navigationTitle("detail.title")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("common.edit", systemImage: "pencil", action: onEdit)
-                Button("common.delete", systemImage: "trash", role: .destructive) { confirmsDelete = true }
+                Menu {
+                    Button("common.delete", systemImage: "trash", role: .destructive) { confirmsDelete = true }
+                } label: {
+                    Image(systemName: "ellipsis")
+                }
+                .accessibilityLabel(Text("detail.title"))
             }
         }
         .confirmationDialog("delete.title", isPresented: $confirmsDelete, titleVisibility: .visible) {
@@ -91,14 +99,13 @@ struct LiveDetailView: View {
             CoverImageView(
                 relativePath: event.coverImagePath,
                 imageStore: imageStore,
-                aspectRatio: 4.0 / 5.0
+                aspectRatio: 4.0 / 3.0
             )
             .clipShape(.rect(cornerRadius: 24))
             .overlay(alignment: .topTrailing) {
                 StatusBadge(status: event.status)
                     .padding(16)
             }
-            .shadow(color: .black.opacity(0.16), radius: 18, y: 10)
             .frame(maxWidth: 520)
             .frame(maxWidth: .infinity, alignment: .center)
 
@@ -150,6 +157,7 @@ struct LiveDetailView: View {
                 }
 
                 if !mapQuery.isEmpty {
+                    Divider()
                     Button {
                         showsMapOptions = true
                     } label: {
@@ -228,10 +236,7 @@ struct LiveDetailView: View {
                     }
                     .padding(14)
                     .background(.tint.opacity(0.12), in: .rect(cornerRadius: 14))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(.tint.opacity(0.45), lineWidth: 1)
-                    }
+
                 }
             }
         }
@@ -281,12 +286,14 @@ struct LiveDetailView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title).font(.headline)
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(.secondary)
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .background(.regularMaterial, in: .rect(cornerRadius: 22))
+        .background(EventPresentation.surface, in: .rect(cornerRadius: 20))
     }
 
     private var mapQuery: String {

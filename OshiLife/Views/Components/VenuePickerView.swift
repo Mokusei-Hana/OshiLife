@@ -19,14 +19,13 @@ struct VenuePickerView: View {
                 } else if search.suggestions.isEmpty, search.errorMessage == nil {
                     ContentUnavailableView.search(text: search.query)
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 10) {
-                            ForEach(Array(search.suggestions.enumerated()), id: \.offset) { _, suggestion in
-                                suggestionButton(suggestion)
-                            }
+                    List {
+                        ForEach(Array(search.suggestions.enumerated()), id: \.offset) { _, suggestion in
+                            suggestionButton(suggestion)
                         }
-                        .padding(16)
                     }
+                    .listStyle(.plain)
+                    .scrollDismissesKeyboard(.interactively)
                 }
             }
             .navigationTitle("venue.picker.title")
@@ -54,6 +53,7 @@ struct VenuePickerView: View {
                 Text(search.errorMessage ?? "")
             }
         }
+        .presentationDragIndicator(.visible)
     }
 
     private func suggestionButton(_ suggestion: MKLocalSearchCompletion) -> some View {
@@ -85,8 +85,7 @@ struct VenuePickerView: View {
                     .font(.caption.bold())
                     .foregroundStyle(.tertiary)
             }
-            .padding(16)
-            .background(.regularMaterial, in: .rect(cornerRadius: 20))
+            .padding(.vertical, 8)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)

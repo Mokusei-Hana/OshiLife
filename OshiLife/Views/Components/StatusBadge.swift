@@ -9,7 +9,7 @@ struct StatusBadge: View {
             .foregroundStyle(status.tint)
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
-            .glassEffect(.regular.tint(status.tint.opacity(0.15)), in: .capsule)
+            .background(EventPresentation.surface, in: .capsule)
             .accessibilityElement(children: .combine)
     }
 }

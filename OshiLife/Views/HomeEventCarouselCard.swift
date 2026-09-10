@@ -10,9 +10,8 @@ struct HomeEventCarouselCard: View {
             CoverImageView(
                 relativePath: event.coverImagePath,
                 imageStore: imageStore,
-                height: 310
+                height: 240
             )
-            .clipShape(.rect(cornerRadius: 24))
             .overlay(alignment: .topTrailing) {
                 StatusBadge(status: event.status)
                     .padding(14)
@@ -27,7 +26,7 @@ struct HomeEventCarouselCard: View {
                 }
 
                 Text(event.title)
-                    .font(.title3.bold())
+                    .font(.title2.bold())
                     .foregroundStyle(.primary)
                     .lineLimit(2)
 
@@ -45,9 +44,13 @@ struct HomeEventCarouselCard: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
+                if event.openTime != nil || event.startTime != nil {
+                    Divider().padding(.vertical, 4)
+                    EventSchedule(openTime: event.openTime, startTime: event.startTime)
+                }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 28)
+            .padding(.horizontal, EventPresentation.inset)
+            .padding(.top, 20)
             .padding(.bottom, 16)
             .frame(maxWidth: .infinity, minHeight: 154, alignment: .topLeading)
         }
@@ -68,8 +71,9 @@ struct HistoricalEventCard: View {
             CoverImageView(
                 relativePath: event.coverImagePath,
                 imageStore: imageStore,
-                height: 122
+                height: 112
             )
+            .clipShape(.rect(cornerRadius: 12))
 
             VStack(alignment: .leading, spacing: 5) {
                 Text(event.title)
@@ -79,15 +83,10 @@ struct HistoricalEventCard: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            .padding(12)
+            .padding(.vertical, 12)
         }
         .frame(width: 208)
-        .background(.regularMaterial)
-        .clipShape(.rect(cornerRadius: 18))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(.white.opacity(0.12), lineWidth: 1)
-        }
+
         .contentShape(.rect(cornerRadius: 18))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text("card.accessibility \(event.artistName) \(event.title)"))

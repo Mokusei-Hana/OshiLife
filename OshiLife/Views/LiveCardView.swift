@@ -39,7 +39,7 @@ struct LiveCardView: View {
         }
         .frame(minHeight: 132)
         .clipShape(.rect(cornerRadius: 22))
-        .glassEffect(.regular, in: .rect(cornerRadius: 22))
+        .background(EventPresentation.surface, in: .rect(cornerRadius: 22))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text("card.accessibility \(event.artistName) \(event.title)"))
         .accessibilityIdentifier("eventCard")

@@ -28,6 +28,8 @@ private enum EventDisplayMode: String, CaseIterable, Identifiable {
 }
 
 struct LiveListView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ScaledMetric(relativeTo: .body) private var carouselHeight: CGFloat = 660
     @Environment(\.scenePhase) private var scenePhase
     @Environment(AppSettings.self) private var settings
     private let liveStore: LiveStore
@@ -151,6 +153,7 @@ struct LiveListView: View {
                         .refreshable { viewModel.load() }
                 }
             }
+            .background(EventPresentation.background)
             .navigationTitle("app.name")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -241,18 +244,15 @@ struct LiveListView: View {
     }
 
     private func eventList(_ events: [LiveEvent]) -> some View {
-        ScrollView {
-            LazyVStack(spacing: 10) {
-                ForEach(events) { event in
-                    eventLink(event) {
-                        LiveListRowView(event: event)
-                    }
+        List {
+            ForEach(events) { event in
+                eventLink(event) {
+                    LiveListRowView(event: event)
                 }
+                .listRowBackground(EventPresentation.surface)
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 14)
         }
-        .animation(.snappy, value: displayMode)
+        .listStyle(.insetGrouped)
     }
 
     private func homeContent(_ events: [LiveEvent]) -> some View {
@@ -311,7 +311,7 @@ struct LiveListView: View {
 
     private func eventCarousel(_ events: [LiveEvent], now: Date) -> some View {
         GeometryReader { proxy in
-            let cardWidth = min(360, max(288, proxy.size.width - 32))
+            let cardWidth = min(420, max(1, proxy.size.width - 40))
             let horizontalMargin = max(16, (proxy.size.width - cardWidth) / 2)
 
             ScrollView(.horizontal) {
@@ -321,8 +321,8 @@ struct LiveListView: View {
                             eventHeroCard(event, now: now, width: cardWidth)
                             .scrollTransition(.interactive, axis: .horizontal) { content, phase in
                                 content
-                                    .scaleEffect(phase.isIdentity ? 1 : 0.85)
-                                    .opacity(phase.isIdentity ? 1 : 0.62)
+                                    .scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.97)
+                                    .opacity(reduceMotion || phase.isIdentity ? 1 : 0.78)
                             }
                         }
                         .zIndex(focusedEventID == event.id ? 1 : 0)
@@ -350,7 +350,7 @@ struct LiveListView: View {
                 showsCarouselPageIndicator = false
             }
         }
-        .frame(height: 640)
+        .frame(height: carouselHeight)
     }
 
     private func eventHeroCard(_ event: LiveEvent, now: Date, width: CGFloat) -> some View {
@@ -364,13 +364,9 @@ struct LiveListView: View {
             countdownCard(for: event, now: now)
         }
         .frame(width: width)
-        .background(.regularMaterial)
-        .clipShape(.rect(cornerRadius: 24))
-        .overlay {
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(.primary.opacity(0.08), lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.10), radius: 14, y: 6)
+        .background(EventPresentation.surface)
+        .clipShape(.rect(cornerRadius: EventPresentation.cornerRadius))
+        .shadow(color: .black.opacity(0.04), radius: 8, y: 4)
         .contentShape(.rect(cornerRadius: 24))
     }
 
@@ -473,7 +469,7 @@ struct LiveListView: View {
                 }
 
                 Text(countdownText(until: event.eventDate, now: now))
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .font(.largeTitle.bold())
                     .foregroundStyle(.tint)
                     .monospacedDigit()
 
@@ -484,10 +480,10 @@ struct LiveListView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
-            .background(.tint.opacity(0.10))
+            .background(EventPresentation.surface)
             .overlay(alignment: .top) {
                 Rectangle()
-                    .fill(.tint.opacity(0.18))
+                    .fill(Color(uiColor: .separator))
                     .frame(height: 1)
             }
         }
@@ -509,7 +505,7 @@ struct LiveListView: View {
             .foregroundStyle(.orange)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
-            .glassEffect(.regular.tint(.orange.opacity(0.12)), in: .rect(cornerRadius: 16))
+            .background(EventPresentation.surface, in: .rect(cornerRadius: 16))
     }
 }
 

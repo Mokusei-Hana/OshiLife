@@ -107,7 +107,7 @@ struct LiveEditorView: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                             Button("import.duplicate.open") { onOpenDuplicate?() }
-                                .buttonStyle(.glass)
+                                .buttonStyle(.borderless)
                         }
                         .padding(.vertical, 4)
                     }
@@ -137,8 +137,6 @@ struct LiveEditorView: View {
                 Section("editor.basic") {
                     TextField("field.artist", text: $viewModel.artistName)
                         .textContentType(.organizationName)
-                    TextField("field.performers", text: $viewModel.performersText, axis: .vertical)
-                        .lineLimit(1...3)
                     TextField("field.title", text: $viewModel.title, axis: .vertical)
                         .lineLimit(1...3)
                     Picker("field.status", selection: $viewModel.status) {
@@ -146,6 +144,11 @@ struct LiveEditorView: View {
                             Label(status.localizedName, systemImage: status.systemImage).tag(status)
                         }
                     }
+                }
+
+                Section("field.performers") {
+                    TextField("field.performers", text: $viewModel.performersText, axis: .vertical)
+                        .lineLimit(2...6)
                 }
 
                 Section("editor.schedule") {
@@ -180,9 +183,8 @@ struct LiveEditorView: View {
                             showsVenuePicker = true
                         } label: {
                             Label("venue.choose", systemImage: "map.fill")
-                                .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.glassProminent)
+                        .buttonStyle(.borderless)
                     } else {
                         VStack(alignment: .leading, spacing: 12) {
                             Label {
@@ -204,11 +206,11 @@ struct LiveEditorView: View {
                                 Button("venue.change", systemImage: "map") {
                                     showsVenuePicker = true
                                 }
-                                .buttonStyle(.glass)
+                                .buttonStyle(.borderless)
                                 Button("venue.clear", systemImage: "xmark", role: .destructive) {
                                     viewModel.clearVenue()
                                 }
-                                .buttonStyle(.glass)
+                                .buttonStyle(.borderless)
                             }
                         }
                         .padding(.vertical, 4)
@@ -262,7 +264,7 @@ struct LiveEditorView: View {
 
                 Section("field.notes") {
                     TextEditor(text: $viewModel.notes)
-                        .frame(minHeight: 120)
+                        .frame(minHeight: 140)
                 }
 
                 if !viewModel.validationMessages.isEmpty {
@@ -274,6 +276,8 @@ struct LiveEditorView: View {
                     }
                 }
             }
+            .formStyle(.grouped)
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(viewModel.isEditing ? "editor.edit_title" : "editor.new_title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -284,6 +288,7 @@ struct LiveEditorView: View {
                     Button("common.save") {
                         if viewModel.save(imageStore: imageStore) != nil { onSaved() }
                     }
+                    .buttonStyle(.glassProminent)
                     .disabled(!viewModel.canSave)
                 }
             }
@@ -301,6 +306,7 @@ struct LiveEditorView: View {
                 }
             }
         }
+        .presentationDragIndicator(.visible)
     }
 
     private func ticketLabel(_ option: TicketOption) -> String {
@@ -315,11 +321,11 @@ struct LiveEditorView: View {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
-                        .frame(height: 190)
+                        .frame(height: 220)
                         .frame(maxWidth: .infinity)
                         .clipShape(.rect(cornerRadius: 18))
                 } else if !viewModel.removesExistingCover, viewModel.existingCoverPath != nil {
-                    CoverImageView(relativePath: viewModel.existingCoverPath, imageStore: imageStore, height: 190)
+                    CoverImageView(relativePath: viewModel.existingCoverPath, imageStore: imageStore, height: 220)
                         .clipShape(.rect(cornerRadius: 18))
                 }
             }

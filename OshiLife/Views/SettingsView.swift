@@ -12,32 +12,43 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("settings.appearance.section") {
-                Picker("settings.accent_color_mode", selection: $settings.accentColorMode) {
+                Picker(selection: $settings.accentColorMode) {
                     ForEach(AccentColorMode.allCases) { mode in
                         Text(mode.title).tag(mode)
                     }
+                } label: {
+                    Label("settings.accent_color_mode", systemImage: "paintpalette")
                 }
+                .pickerStyle(.navigationLink)
 
-                Picker("settings.app_appearance", selection: $settings.appearance) {
+                Picker(selection: $settings.appearance) {
                     ForEach(AppAppearance.allCases) { appearance in
                         Text(appearance.title).tag(appearance)
                     }
+                } label: {
+                    Label("settings.app_appearance", systemImage: "circle.lefthalf.filled")
                 }
+                .pickerStyle(.navigationLink)
             }
 
             Section("settings.language.section") {
-                Picker("settings.language", selection: $settings.language) {
+                Picker(selection: $settings.language) {
                     ForEach(AppLanguage.allCases) { language in
                         Text(language.title).tag(language)
                     }
+                } label: {
+                    Label("settings.language", systemImage: "globe")
                 }
+                .pickerStyle(.navigationLink)
             }
 
             Section("settings.about.section") {
                 LabeledContent("settings.application_name", value: versionInfo.applicationName)
                 LabeledContent("settings.version", value: versionInfo.version)
                 LabeledContent("settings.build", value: versionInfo.build)
+            }
 
+            Section {
                 Link(destination: ProjectLinks.github) {
                     Label("settings.github", systemImage: "chevron.left.forwardslash.chevron.right")
                 }
@@ -48,7 +59,7 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("settings.title")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
     }
 }
 

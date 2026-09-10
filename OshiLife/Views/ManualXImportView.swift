@@ -9,35 +9,33 @@ struct ManualXImportView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+            Form {
+                Section {
                     header
-
-                    if let suggestion = viewModel.clipboardSuggestion {
+                }
+                if let suggestion = viewModel.clipboardSuggestion {
+                    Section {
                         clipboardSuggestion(suggestion)
                     }
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("manual_import.url.label")
-                            .font(.headline)
-                        TextField("manual_import.url.placeholder", text: $viewModel.urlString, axis: .vertical)
-                            .keyboardType(.URL)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .lineLimit(2...4)
-                            .padding(14)
-                            .glassEffect(.regular, in: .rect(cornerRadius: 16))
-                            .onChange(of: viewModel.urlString) { _, _ in
-                                viewModel.errorMessage = nil
-                            }
-
-                        if let errorMessage = viewModel.errorMessage {
-                            Label(errorMessage, systemImage: "exclamationmark.circle.fill")
-                                .font(.footnote)
-                                .foregroundStyle(.red)
+                }
+                Section("manual_import.url.label") {
+                    TextField("manual_import.url.placeholder", text: $viewModel.urlString, axis: .vertical)
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .lineLimit(2...4)
+                        .onChange(of: viewModel.urlString) { _, _ in
+                            viewModel.errorMessage = nil
                         }
-                    }
 
+                    if let errorMessage = viewModel.errorMessage {
+                        Label(errorMessage, systemImage: "exclamationmark.circle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                Section {
                     Button {
                         Task {
                             if let draft = await viewModel.importDraft() {
@@ -54,12 +52,13 @@ struct ManualXImportView: View {
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
                     .disabled(!viewModel.canImport)
                     .accessibilityIdentifier("manualXImportButton")
                 }
-                .padding(20)
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("manual_import.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -71,12 +70,14 @@ struct ManualXImportView: View {
                 viewModel.checkClipboard(text: UIPasteboard.general.string)
             }
         }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        HStack(alignment: .center, spacing: 16) {
             Image(systemName: "link.badge.plus")
-                .font(.system(size: 34, weight: .semibold))
+                .font(.largeTitle.weight(.medium))
                 .foregroundStyle(.tint)
             Text("manual_import.message")
                 .foregroundStyle(.secondary)
@@ -98,10 +99,8 @@ struct ManualXImportView: View {
                     .font(.subheadline.weight(.semibold))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.tint(.accentColor.opacity(0.12)), in: .rect(cornerRadius: 20))
     }
 }

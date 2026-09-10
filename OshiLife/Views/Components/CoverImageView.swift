@@ -27,14 +27,10 @@ struct CoverImageView: View {
                     .scaledToFill()
             } else {
                 ZStack {
-                    LinearGradient(
-                        colors: [.pink.opacity(0.65), .purple.opacity(0.55), .blue.opacity(0.35)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+                    Color(uiColor: .tertiarySystemGroupedBackground)
                     Image(systemName: "music.note.list")
                         .font(.system(size: 42, weight: .light))
-                        .foregroundStyle(.white.opacity(0.9))
+                        .foregroundStyle(.secondary)
                         .accessibilityHidden(true)
                 }
             }
